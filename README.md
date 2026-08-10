@@ -19,6 +19,7 @@ An interactive 3D solar-system simulation built for education — orbit it, zoom
 | ⏱️ **Time control** | 0.01 – 600 days/second, with a pause button |
 | 🔊 **Read aloud** | Every info panel can be narrated out loud in either language, highlighting each paragraph as it is read — for children who are not fluent readers yet |
 | 🚀 **Pilot mode** | Take the controls: a thrust lever, a steering stick, and a talking ship computer. Fly to any planet and open its data on arrival |
+| 🎚️ **Synthesised engine** | The engine roar is generated in the browser — no audio files — and swells with the thrust lever, ducking whenever the ship computer speaks |
 | 🌐 **Bilingual** | The language is chosen on first launch (and remembered), and the ID/EN buttons switch the entire interface *and* all content at any time |
 | 📄 **In-app credits** | A credits button in the top bar lists every data and texture source, with links |
 | 📱 **Mobile-first** | The info panel becomes a bottom sheet, touch targets are enlarged, and the camera reframes itself automatically |
@@ -81,6 +82,28 @@ Some deliberate choices:
 The ship computer speaks its callouts — engine start, full thrust, approaching a
 planet, arrival, and the Sun warning — through the same Web Speech API as the panel
 narration, in whichever language is selected, and can be muted from the cockpit.
+
+### Engine sound
+
+Synthesised with the Web Audio API rather than shipped as audio files, so it stays a
+single generated HTML file with nothing to download. Three layers: looping brown noise
+through a lowpass for the roar, three detuned sawtooths for the mechanical hum (the
+detuning is what stops it sounding like a keyboard note), and a sine near 40 Hz for
+weight. The thrust lever drives volume, filter cutoff and pitch at once — moving all
+three together is what makes the ear believe the engine is working. Passing a planet
+gets a whoosh, a collision a thud, and the Sun a two-tone alarm.
+
+The engine ducks to a quarter of its volume whenever the ship computer speaks,
+otherwise a child hears the roar and none of the words. It has its own mute button,
+separate from the voice — a classroom usually wants the narration without the engine —
+and that choice is remembered. Muted, no `AudioContext` is created at all.
+
+Audio only ever starts from the button press that enters pilot mode, because browsers
+allow it no other way, and it is suspended on exit and in a hidden tab.
+
+> On iPhone, Web Audio follows the physical silent switch in some conditions, so the
+> engine can be inaudible with the phone silenced even though everything is working.
+> That is iOS behaviour, not something the page can override.
 
 Controls: drag or arrows/WASD to steer, the lever or the mouse wheel for thrust,
 space to brake, Escape to leave.

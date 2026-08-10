@@ -932,6 +932,138 @@ function realPos(v, out){
   return out.copy(v).multiplyScalar(mapToAU(r)/r);
 }
 
+/* ---- engine sound =================================================
+   Synthesised with the Web Audio API rather than shipped as files: the whole
+   app is one generated HTML file, so an MP3 would mean a new asset folder.
+
+   The rumble is three layers — looping brown noise through a lowpass for the
+   roar, three detuned sawtooths for the mechanical hum (the detuning is what
+   stops it sounding like a keyboard note), and a sine near 40 Hz for weight.
+   The thrust lever drives volume, filter cutoff and pitch together; moving
+   all three at once is what makes the ear believe the engine is working.    */
+const ENGINE_KEY = 'solar-explorer:engine';
+let actx = null, eng = null;
+let engineOn = (()=>{ try{ return localStorage.getItem(ENGINE_KEY) !== 'off'; }catch(e){ return true; } })();
+
+function noiseBuffer(ctx){
+  const len = Math.floor(ctx.sampleRate * 2);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for(let i=0;i<len;i++){
+    last = (last + 0.02*(Math.random()*2-1)) / 1.02;   // brown noise: weighted low
+    d[i] = Math.max(-1, Math.min(1, last*3.2));
+  }
+  return buf;
+}
+
+/* Must be called from inside a user gesture — browsers refuse to start audio
+   any other way. Entering pilot mode is a button press, so that is where it
+   happens. */
+function audioInit(){
+  if(actx) return actx;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  try{ actx = new AC(); }catch(e){ actx = null; return null; }
+
+  const master = actx.createGain(); master.gain.value = 0.85; master.connect(actx.destination);
+  const duck   = actx.createGain(); duck.gain.value = 1; duck.connect(master);
+  const level  = actx.createGain(); level.gain.value = 0; level.connect(duck);
+
+  const nSrc = actx.createBufferSource();
+  nSrc.buffer = noiseBuffer(actx); nSrc.loop = true;
+  const nFilt = actx.createBiquadFilter();
+  nFilt.type = 'lowpass'; nFilt.frequency.value = 170; nFilt.Q.value = 0.7;
+  const nGain = actx.createGain(); nGain.gain.value = 0.6;
+  nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(level);
+
+  const oGain = actx.createGain(); oGain.gain.value = 0.14;
+  const oFilt = actx.createBiquadFilter();
+  oFilt.type = 'lowpass'; oFilt.frequency.value = 320; oFilt.Q.value = 1.1;
+  oGain.connect(oFilt); oFilt.connect(level);
+  const oscs = [-9, 0, 11].map(cents=>{
+    const o = actx.createOscillator();
+    o.type = 'sawtooth'; o.frequency.value = 42; o.detune.value = cents;
+    o.connect(oGain); return o;
+  });
+
+  const sub = actx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 34;
+  const sGain = actx.createGain(); sGain.gain.value = 0.24;
+  sub.connect(sGain); sGain.connect(level);
+
+  try{ nSrc.start(); oscs.forEach(o=>o.start()); sub.start(); }catch(e){}
+  eng = {master, duck, level, nFilt, oFilt, oscs, sub};
+  return actx;
+}
+
+/* resume()/suspend() hand back a promise that can reject — a try/catch does
+   not cover that, and an unhandled rejection lands in the console. */
+function audioSet(action){
+  if(!actx) return;
+  try{
+    const r = actx[action]();
+    if(r && r.catch) r.catch(()=>{});
+  }catch(e){}
+}
+
+function engineUpdate(){
+  if(!actx || !eng) return;
+  const now = actx.currentTime, T = 0.14;
+  const live = pilot && engineOn;
+  const th = live ? throttle : 0;
+  eng.level.gain.setTargetAtTime(live ? 0.05 + 0.5*th : 0, now, T);
+  eng.nFilt.frequency.setTargetAtTime(170 + 2100*th*th, now, T);
+  eng.oFilt.frequency.setTargetAtTime(300 + 1500*th, now, T);
+  const f = 40 + 40*th;
+  eng.oscs.forEach((o, i)=> o.frequency.setTargetAtTime(f*(1 + i*0.006), now, T));
+  eng.sub.frequency.setTargetAtTime(34 + 16*th, now, T);
+}
+
+/* The engine has to get out of the way of the voice, or a child hears the
+   roar and none of the words. */
+function engineDuck(on){
+  if(!actx || !eng) return;
+  eng.duck.gain.setTargetAtTime(on ? 0.22 : 1, actx.currentTime, on ? 0.05 : 0.3);
+}
+
+function sfx(kind){
+  if(!actx || !eng || !engineOn || actx.state !== 'running') return;
+  const now = actx.currentTime;
+  if(kind === 'whoosh'){
+    const s = actx.createBufferSource(); s.buffer = noiseBuffer(actx);
+    const f = actx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+    const g = actx.createGain();
+    f.frequency.setValueAtTime(260, now);
+    f.frequency.exponentialRampToValueAtTime(1700, now + 0.28);
+    f.frequency.exponentialRampToValueAtTime(240, now + 0.85);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.5, now + 0.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    s.connect(f); f.connect(g); g.connect(eng.master);
+    s.start(now); s.stop(now + 0.95);
+  } else if(kind === 'thud'){
+    const o = actx.createOscillator(); o.type = 'sine';
+    const g = actx.createGain();
+    o.frequency.setValueAtTime(120, now);
+    o.frequency.exponentialRampToValueAtTime(32, now + 0.32);
+    g.gain.setValueAtTime(0.7, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+    o.connect(g); g.connect(eng.master);
+    o.start(now); o.stop(now + 0.42);
+  } else if(kind === 'alarm'){
+    for(let i=0;i<2;i++){
+      const at = now + i*0.26;
+      const o = actx.createOscillator(); o.type = 'square'; o.frequency.value = i ? 700 : 880;
+      const g = actx.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.16, at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.19);
+      o.connect(g); g.connect(eng.master);
+      o.start(at); o.stop(at + 0.2);
+    }
+  }
+}
+
 /* One-line callouts from the ship's computer. Deliberately droppable: if a
    line is already playing, a new low-priority one is skipped rather than
    queued, so the cockpit never falls behind what the child is doing. */
@@ -945,8 +1077,9 @@ function sayComputer(text, force){
     u.lang = v ? v.lang : (lang==='id' ? 'id-ID' : 'en-US');
     u.rate = 1.0; u.pitch = 0.92;        // flatter than the storytelling voice
     sayBusy = true;
-    u.onend = ()=>{ sayBusy = false; };
-    u.onerror = ()=>{ sayBusy = false; };
+    engineDuck(true);
+    u.onend = ()=>{ sayBusy = false; engineDuck(false); };
+    u.onerror = ()=>{ sayBusy = false; engineDuck(false); };
     if(force){
       // same rule as the panel narration: Safari drops a speak() issued in the
       // same tick as a cancel(), so let the cancel land first
@@ -975,6 +1108,7 @@ function syncCockpitLang(){
   el('ckExit').textContent = t('ckExit');
   el('ckData').textContent = t('ckData');
   el('ckVoice').title = t('ckVoice');
+  el('ckEngine').title = t('ckEngine');
   el('pilotBtn').title = t('pilot');
   el('ckHint').textContent = isTouch ? t('ckHintTouch') : t('ckHintDesk');
 }
@@ -989,6 +1123,7 @@ function setThrottle(v){
   el('thrFill').style.height = (throttle*100).toFixed(1) + '%';
   el('thrGrip').style.bottom = `calc(2px + ${throttle.toFixed(3)} * (100% - 16px))`;
   el('thrVal').textContent = Math.round(throttle*100) + '%';
+  engineUpdate();
   if(!pilot) return;
   if(throttle > 0.995 && was <= 0.995) sayOnce('full', t('sayFull'), 12000);
   if(throttle < 0.005 && was >= 0.005) sayOnce('idle', t('sayIdle'), 12000);
@@ -1034,6 +1169,12 @@ function enterPilot(){
   el('ckHint').classList.remove('hide');
   setTimeout(()=>{ if(pilot) el('ckHint').classList.add('hide'); }, 12000);
   syncCockpitLang();
+  // still inside the button press, which is the only moment audio may start.
+  // If the engine is muted, build nothing: no reason to run five oscillators
+  // into silence on a classroom tablet.
+  if(engineOn && audioInit()) audioSet('resume');
+  engineDuck(false);
+  engineUpdate();
   sayComputer(t('sayStart'), true);
 }
 
@@ -1047,6 +1188,10 @@ function exitPilot(openKey){
   el('top').style.display = '';
   el('ckWarn').classList.remove('on');
   if(preDaysPerSec !== null){ daysPerSec = preDaysPerSec; preDaysPerSec = null; updateSpeedLabel(); }
+  engineUpdate();                              // ramps to silence…
+  setTimeout(()=>{                             // …then stop the clock entirely
+    if(!pilot && actx && actx.state === 'running') audioSet('suspend');
+  }, 600);
   // hand a sane orbit centre back to OrbitControls: a point ahead of the ship
   shipFwd.set(0,0,-1).applyQuaternion(camera.quaternion);
   controls.target.copy(camera.position).addScaledVector(shipFwd, 26);
@@ -1100,6 +1245,9 @@ function updateShip(dt){
   const sunHot = camera.position.length() < S.sunR*3.0;
   if(sunHot){
     warn(t('ckWarnHot'));
+    if(!sayLast.hotSfx || performance.now() - sayLast.hotSfx > 2600){
+      sayLast.hotSfx = performance.now(); sfx('alarm');
+    }
     sayOnce('hot', t('sayHot'), 9000);
   }
 
@@ -1115,6 +1263,9 @@ function updateShip(dt){
       const into = shipVel.dot(vTmpB);
       if(into < 0) shipVel.addScaledVector(vTmpB, -into*1.7);   // bounce back out
       warn(t('ckWarnHit'));
+      if(!sayLast.hitSfx || performance.now() - sayLast.hitSfx > 700){
+        sayLast.hitSfx = performance.now(); sfx('thud');
+      }
       sayOnce('hit', t('sayHit'), 4000);
     }
 
@@ -1132,7 +1283,9 @@ function updateShip(dt){
     if(bestSurf < best.dispR*7 && nearKey !== key && arrivedKey !== key){
       // latch only once the line is actually out, so a callout that lost the
       // race with the engine-start greeting is retried instead of swallowed
-      if(sayOnce('near:'+key, t('sayNear').replace('{name}', best.data.name[lang]), 8000)) nearKey = key;
+      if(sayOnce('near:'+key, t('sayNear').replace('{name}', best.data.name[lang]), 8000)){
+        nearKey = key; sfx('whoosh');
+      }
     } else if(bestSurf > best.dispR*11 && nearKey === key){
       nearKey = null;
     }
@@ -1232,8 +1385,24 @@ el('ckData').onclick = ()=> exitPilot(arrivedKey);
 el('ckVoice').onclick = ()=>{
   ckVoiceOn = !ckVoiceOn;
   el('ckVoice').classList.toggle('on', ckVoiceOn);
-  if(!ckVoiceOn){ try{ synth.cancel(); }catch(e){} sayBusy = false; }
+  if(!ckVoiceOn){ try{ synth.cancel(); }catch(e){} sayBusy = false; engineDuck(false); }
 };
+el('ckEngine').onclick = ()=>{
+  engineOn = !engineOn;
+  el('ckEngine').classList.toggle('on', engineOn);
+  // a classroom silences the engine but keeps the narration, so remember it
+  try{ localStorage.setItem(ENGINE_KEY, engineOn ? 'on' : 'off'); }catch(e){}
+  if(engineOn && audioInit()) audioSet('resume');
+  engineUpdate();
+};
+el('ckEngine').classList.toggle('on', engineOn);
+// registered outside the speech block: the engine must stop in a hidden tab
+// whether or not this browser can speak
+document.addEventListener('visibilitychange', ()=>{
+  if(!actx) return;
+  if(document.hidden) audioSet('suspend');
+  else if(pilot) audioSet('resume');
+});
 setThrottle(0);
 
 /* ================= layout ================= */
@@ -1396,7 +1565,10 @@ window.__dbg = () => ({
   tgt: controls.target.toArray().map(v=>+v.toFixed(1)),
   dist: +camera.position.distanceTo(controls.target).toFixed(2),
   follow: followObj, flying: !!flight,
-  pilot, throttle: +throttle.toFixed(2),
+  pilot, throttle: +throttle.toFixed(2), engineOn,
+  audio: actx ? {state: actx.state,
+    level: +eng.level.gain.value.toFixed(3), duck: +eng.duck.gain.value.toFixed(3),
+    cutoff: Math.round(eng.nFilt.frequency.value)} : null,
   fwd: new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3)),
   up: new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3))
 });
