@@ -17,6 +17,7 @@ An interactive 3D solar-system simulation built for education — orbit it, zoom
 | 🔭 **Real orbits** | Ellipses with true eccentricity & inclination, solved through Kepler's equation — planets genuinely slow down at aphelion |
 | 🌗 **Rotation & tilt** | True rotation periods and axial tilts; Venus and Uranus spin retrograde |
 | ⏱️ **Time control** | 0.01 – 600 days/second, with a pause button |
+| 🔊 **Read aloud** | Every info panel can be narrated out loud in either language, highlighting each paragraph as it is read — for children who are not fluent readers yet |
 | 🌐 **Bilingual** | The language is chosen on first launch (and remembered), and the ID/EN buttons switch the entire interface *and* all content at any time |
 | 📄 **In-app credits** | A credits button in the top bar lists every data and texture source, with links |
 | 📱 **Mobile-first** | The info panel becomes a bottom sheet, touch targets are enlarged, and the camera reframes itself automatically |
@@ -32,6 +33,22 @@ Every celestial body comes with:
 - and a full explanation that expands for adult readers.
 
 All of it is available completely in both Indonesian and English.
+
+### Read-aloud narration
+
+The **Bacakan / Read aloud** button in the info panel speaks the body's name, its short
+description, and its three fun facts, highlighting each block as it goes. The long "full
+explanation" is written for adults and is deliberately left out.
+
+It uses the browser's built-in [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API),
+so there is no extra dependency, no API key, and no audio to download — it keeps working
+offline once the device has a voice installed. The narration stops by itself when the panel is
+closed, another body is selected, the language is switched, or the tab is hidden.
+
+Voice quality is the device's, not the app's. Android, iOS, Windows and macOS all ship an
+Indonesian voice; some desktop Linux browsers do not, and in that case the panel says so
+instead of reading Indonesian text with an English voice and pretending it worked. The button
+is hidden entirely on browsers without the API.
 
 ---
 

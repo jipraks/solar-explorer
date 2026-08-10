@@ -412,7 +412,7 @@ function syncNav(){
 function buildHelp(){
   el('helpCard').innerHTML = `
     <h3>${t('helpTitle')}</h3><div class="sub">${t('helpSub')}</div>
-    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],['📏','h5t','h5d']]
+    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],['🔊','h5t','h5d'],['📏','h6t','h6d']]
       .map(([i,a,b])=>`<div class="hrow"><i>${i}</i><div><b>${t(a)}</b><span>${t(b)}</span></div></div>`).join('')}
     <button id="helpClose">${t('close')}</button>`;
   el('helpClose').onclick = ()=> el('help').classList.remove('open');
@@ -430,6 +430,182 @@ function buildCredits(){
   el('creditsClose').onclick = ()=> el('credits').classList.remove('open');
 }
 
+/* ================= read-aloud narration =================
+   Web Speech API — built in to the browser, so no extra dependency and it
+   keeps working offline once a voice is installed. Deliberately defensive:
+     · getVoices() is asynchronous and returns [] on the first call,
+     · some mobile browsers report an empty voice list even though speech works,
+       so an empty list must never disable the button,
+     · Chrome silently drops utterances longer than ~15 s, so the text is
+       queued sentence by sentence instead of in one go,
+     · Safari ignores a speak() issued in the same tick as a cancel().        */
+const synth = window.speechSynthesis;
+const speechOK = !!synth && typeof window.SpeechSynthesisUtterance === 'function';
+const ICO_SPEAK = '<svg viewBox="0 0 24 24"><path d="M4 9.4h3.3L11.6 6v12L7.3 14.6H4z"/>' +
+  '<path class="wv" d="M15 9.4a3.7 3.7 0 010 5.2"/><path class="wv" d="M17.7 6.8a7.4 7.4 0 010 10.4"/></svg>';
+const ICO_STOP  = '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/></svg>';
+
+let voices = [];
+let speakQueue = [];     // [{text, block}] — one entry per sentence
+let speakIdx = 0;
+let speakBlocksRef = []; // [{el, text}] — one entry per highlighted paragraph
+let speaking = false;
+let speakToken = 0;      // bumped on every stop, so stale callbacks do nothing
+
+function loadVoices(){
+  if(!speechOK) return;
+  try{ voices = synth.getVoices() || []; }catch(e){ voices = []; }
+  updateListenBtn();
+}
+
+/* Best available voice for the current language, or null if there is none. */
+function pickVoice(){
+  const want = lang;   // 'id' | 'en'
+  const cand = voices.filter(v => String(v.lang||'').toLowerCase().replace('_','-').startsWith(want));
+  if(!cand.length) return null;
+  const score = v => {
+    const n = String(v.name||'').toLowerCase();
+    let s = 0;
+    if(/natural|neural|enhanced|premium/.test(n)) s += 4;   // the nicest-sounding tiers
+    if(/google/.test(n)) s += 3;
+    if(want==='en' && /^en-us/i.test(v.lang)) s += 1;
+    if(v.localService) s += 1;                              // works without a network round-trip
+    return s;
+  };
+  return cand.slice().sort((a,b)=>score(b)-score(a))[0];
+}
+
+/* Emoji and typographic bullets read out loud as noise — drop them. */
+function speakClean(s){
+  return String(s)
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2190}-\u{21FF}]/gu, ' ')
+    .replace(/·/g, ', ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* Split into utterance-sized pieces: sentence first, then a hard wrap for any
+   sentence long enough to trip Chrome's cut-off. A full stop only ends a
+   sentence when a space follows it, so "1.000 km" stays in one piece. */
+function chunkText(text){
+  const clean = speakClean(text);
+  if(!clean) return [];
+  const out = [];
+  let buf = '';
+  for(let i=0;i<clean.length;i++){
+    const ch = clean[i], nx = clean[i+1];
+    buf += ch;
+    if('.!?…'.indexOf(ch) >= 0 && (nx === undefined || nx === ' ') && buf.trim().length > 24){
+      out.push(buf.trim()); buf = '';
+    }
+  }
+  if(buf.trim()) out.push(buf.trim());
+
+  const LIM = 180;
+  const wrapped = [];
+  for(const s of out){
+    let rest = s;
+    while(rest.length > LIM){
+      let cut = rest.lastIndexOf(', ', LIM);
+      if(cut < 60) cut = rest.lastIndexOf(' ', LIM);
+      if(cut < 60) cut = LIM;
+      wrapped.push(rest.slice(0, cut).trim());
+      rest = rest.slice(cut).replace(/^[,\s]+/, '');
+    }
+    if(rest) wrapped.push(rest);
+  }
+  return wrapped;
+}
+
+function clearHighlight(){
+  document.querySelectorAll('.speaking').forEach(n => n.classList.remove('speaking'));
+}
+function highlight(i){
+  clearHighlight();
+  const b = speakBlocksRef[i];
+  if(!b || !b.el || !b.el.isConnected) return;
+  b.el.classList.add('speaking');
+  const box = el('pbody').getBoundingClientRect(), r = b.el.getBoundingClientRect();
+  if(r.top < box.top + 8 || r.bottom > box.bottom - 8)
+    b.el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function stopSpeak(){
+  speakToken++;
+  speaking = false; speakQueue = []; speakIdx = 0; speakBlocksRef = [];
+  if(speechOK){ try{ synth.cancel(); }catch(e){} }
+  clearHighlight();
+  updateListenBtn();
+}
+
+function speakNext(token){
+  if(token !== speakToken) return;
+  if(speakIdx >= speakQueue.length){ stopSpeak(); return; }
+  const item = speakQueue[speakIdx];
+  highlight(item.block);
+
+  const u = new SpeechSynthesisUtterance(item.text);
+  const v = pickVoice();
+  if(v) u.voice = v;
+  u.lang = v ? v.lang : (lang==='id' ? 'id-ID' : 'en-US');
+  u.rate = 0.94;    // a touch slower than default — easier for young listeners
+  u.pitch = 1.05;
+  u.onend = ()=>{ if(token !== speakToken) return; speakIdx++; speakNext(token); };
+  u.onerror = ev=>{
+    if(token !== speakToken) return;
+    const err = ev && ev.error;
+    if(err === 'interrupted' || err === 'canceled') return;   // we stopped it on purpose
+    speakIdx++; speakNext(token);                             // skip the bad chunk, keep going
+  };
+  try{ synth.resume(); synth.speak(u); }catch(e){ stopSpeak(); }
+}
+
+/* Reads the panel's kid-facing copy: title, description, and the fun facts.
+   The long "full explanation" is written for adults and is left out. */
+function speakPanel(){
+  if(!speechOK) return;
+  stopSpeak();
+  const token = ++speakToken;
+
+  const blocks = [{el:null, text: el('pname').textContent + '.'}];
+  el('pbody').querySelectorAll('[data-sp]').forEach(n => blocks.push({el:n, text:n.textContent}));
+
+  const q = [];
+  blocks.forEach((b, bi) => chunkText(b.text).forEach(s => q.push({text:s, block:bi})));
+  if(!q.length){ stopSpeak(); return; }
+
+  speakBlocksRef = blocks; speakQueue = q; speakIdx = 0; speaking = true;
+  updateListenBtn();
+  // Safari drops a speak() fired in the same tick as the cancel() above.
+  setTimeout(()=>{ if(token === speakToken) speakNext(token); }, 90);
+}
+
+function updateListenBtn(){
+  const b = el('listenBtn'), note = el('voiceNote');
+  if(!b) return;
+  if(!speechOK){ b.classList.remove('show'); note.classList.remove('show'); return; }
+  b.classList.toggle('show', !!focusKey);
+  b.classList.toggle('on', speaking);
+  b.innerHTML = (speaking ? ICO_STOP : ICO_SPEAK) + '<span>' + t(speaking ? 'listenStop' : 'listen') + '</span>';
+  b.setAttribute('aria-label', t(speaking ? 'listenStop' : 'listen'));
+  // Only warn when the device really has no matching voice — an empty list
+  // means "not reported yet", which is common on mobile and speaks fine.
+  const missing = voices.length > 0 && !pickVoice();
+  note.textContent = missing ? t('voiceMissing') : '';
+  note.classList.toggle('show', missing && !!focusKey);
+}
+
+if(speechOK){
+  loadVoices();
+  synth.onvoiceschanged = loadVoices;
+  setTimeout(loadVoices, 1200);            // some browsers populate late without firing the event
+  setInterval(()=>{                        // Chrome can silently pause a long queue
+    if(speaking && synth.paused){ try{ synth.resume(); }catch(e){} }
+  }, 6000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopSpeak(); });
+  addEventListener('pagehide', ()=>{ try{ synth.cancel(); }catch(e){} });
+}
+
 /* ================= UI: info panel ================= */
 function statCard(v, l){ return `<div class="stat"><b>${v}</b><span>${l}</span></div>`; }
 
@@ -445,6 +621,7 @@ function yearText(d){
 function openPanel(key, fly){
   const d = key==='belt' ? BELT : BODIES.find(b=>b.key===key);
   if(!d) return;
+  stopSpeak();                 // the panel is about to be rebuilt under the narration
   focusKey = key; syncNav();
   el('ptype').textContent = t(d.type==='star'?'star':d.type==='dwarf'?'dwarf':d.type==='region'?'region':'planet');
   el('pname').textContent = d.name[lang];
@@ -482,12 +659,12 @@ function openPanel(key, fly){
   }
 
   el('pbody').innerHTML = `
-    <p>${d.desc[lang]}</p>
+    <p data-sp>${d.desc[lang]}</p>
     ${stats?`<div class="sechead">${t('statsHead')}</div><div class="stats">${stats}</div>`:''}
     ${cmp}
     ${moonsHtml}
-    <div class="sechead">${t('factsHead')}</div>
-    ${d.facts.map(f=>`<div class="fact"><i>${f.ic}</i><div>${f[lang]}</div></div>`).join('')}
+    <div class="sechead" data-sp>${t('factsHead')}</div>
+    ${d.facts.map(f=>`<div class="fact" data-sp><i>${f.ic}</i><div>${f[lang]}</div></div>`).join('')}
     <button id="deepBtn">${t('more')}</button>
     <div id="deep">${d.deep[lang].split('\n\n').map(p=>`<p>${p}</p>`).join('')}</div>
     ${d.key!=='belt'?`<button id="gotoBtn">${t('goto')}</button>`:''}
@@ -502,12 +679,14 @@ function openPanel(key, fly){
   const gb = el('gotoBtn'); if(gb) gb.onclick = ()=> flyTo(key);
   el('pbody').scrollTop = 0;
   el('panel').classList.add('open');
+  updateListenBtn();
   if(fly) flyTo(key);
 }
 function closePanel(){
   const key = focusKey, wasFollowing = !!followObj;
   el('panel').classList.remove('open');
   focusKey = null; syncNav();
+  stopSpeak();
   if(wasFollowing && key && key !== 'belt') flyTo(key, 0.7);  // reframe back to the centre
   else followObj = null;
 }
@@ -666,6 +845,7 @@ el('help').onclick = e=>{ if(e.target.id==='help') el('help').classList.remove('
 el('creditsBtn').onclick = ()=> el('credits').classList.add('open');
 el('credits').onclick = e=>{ if(e.target.id==='credits') el('credits').classList.remove('open'); };
 el('pclose').onclick = closePanel;
+el('listenBtn').onclick = ()=>{ if(speaking) stopSpeak(); else speakPanel(); };
 el('langID').onclick = ()=> setLang('id');
 el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
