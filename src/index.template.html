@@ -226,10 +226,10 @@
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);white-space:nowrap}
   .ckb:active{transform:scale(.95)}
   .ckb.hide{display:none}
-  #ckVoice{width:42px;padding:9px 0;display:grid;place-items:center}
-  #ckVoice svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  #ckVoice.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
-  #ckVoice.on svg{stroke:var(--accent)}
+  #ckVoice,#ckEngine{width:42px;padding:9px 0;display:grid;place-items:center}
+  #ckVoice svg,#ckEngine svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #ckVoice.on,#ckEngine.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
+  #ckVoice.on svg,#ckEngine.on svg{stroke:var(--accent)}
   #ckData{border-color:rgba(255,212,121,.55);background:rgba(255,212,121,.18);color:var(--accent2)}
   #ckExit{border-color:rgba(255,255,255,.18)}
 
@@ -425,6 +425,9 @@
   <div id="ckBtns">
     <button class="ckb on" id="ckVoice" aria-label="voice">
       <svg viewBox="0 0 24 24"><path d="M4 9.4h3.3L11.6 6v12L7.3 14.6H4z"/><path d="M15 9.4a3.7 3.7 0 010 5.2"/><path d="M17.7 6.8a7.4 7.4 0 010 10.4"/></svg>
+    </button>
+    <button class="ckb on" id="ckEngine" aria-label="engine sound">
+      <svg viewBox="0 0 24 24"><path d="M4 13.5v-3M8 16.5v-9M12 18.5v-13M16 15.5v-7M20 12.5v-1"/></svg>
     </button>
     <button class="ckb hide" id="ckData">Buka data</button>
     <button class="ckb" id="ckExit">Keluar</button>
