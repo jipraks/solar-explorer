@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05060f">
+<title>Jelajah Tata Surya · Explore the Solar System</title>
+<style>
+  :root{
+    --bg:#05060f;
+    --ink:#eef2ff;
+    --muted:#9aa6c7;
+    --line:rgba(160,180,255,.16);
+    --glass:rgba(14,18,38,.72);
+    --glass2:rgba(20,26,52,.86);
+    --accent:#7cc4ff;
+    --accent2:#ffd479;
+    --safe-t:env(safe-area-inset-top,0px);
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    overscroll-behavior:none;touch-action:none}
+  canvas{display:block;touch-action:none}
+  button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+  /* ---------- Loader ---------- */
+  #loader{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 45%,#131a35 0%,#05060f 70%);transition:opacity .7s ease,visibility .7s}
+  #loader.done{opacity:0;visibility:hidden}
+  .orbit-spin{width:96px;height:96px;border-radius:50%;border:1px solid rgba(124,196,255,.25);position:relative;animation:spin 3.4s linear infinite}
+  .orbit-spin::after{content:"";position:absolute;top:-5px;left:calc(50% - 5px);width:10px;height:10px;border-radius:50%;
+    background:var(--accent);box-shadow:0 0 16px 4px rgba(124,196,255,.75)}
+  .orbit-core{position:absolute;inset:0;margin:auto;width:26px;height:26px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#fff3c4,#ffb443 55%,#ff7a18);box-shadow:0 0 34px 8px rgba(255,160,60,.5)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loadTxt{margin-top:26px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  #barWrap{margin-top:14px;width:190px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+  #bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+
+  /* ---------- Top bar ---------- */
+  #top{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:10px;
+    padding:calc(10px + var(--safe-t)) 12px 10px;
+    background:linear-gradient(180deg,rgba(5,6,15,.85),rgba(5,6,15,0));pointer-events:none}
+  #top>*{pointer-events:auto}
+  #brand{display:flex;flex-direction:column;line-height:1.15;margin-right:auto;min-width:0}
+  #brand b{font-size:15px;font-weight:650;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #brand span{font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+  .pill{display:flex;align-items:center;gap:2px;background:var(--glass);border:1px solid var(--line);
+    border-radius:999px;padding:3px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .pill button{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);transition:.2s}
+  .pill button.on{background:rgba(124,196,255,.18);color:var(--accent)}
+  .iconbtn{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--glass);
+    border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.2s}
+  .iconbtn:active{transform:scale(.94)}
+  .iconbtn svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .iconbtn.on{background:rgba(124,196,255,.2);border-color:rgba(124,196,255,.45)}
+  .iconbtn.on svg{stroke:var(--accent)}
+
+  /* ---------- Planet nav ---------- */
+  #nav{position:fixed;z-index:28;left:0;right:0;bottom:calc(96px + var(--safe-b));
+    display:flex;gap:7px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+  #nav::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:6px 13px 6px 7px;border-radius:999px;
+    background:var(--glass);border:1px solid var(--line);font-size:12.5px;font-weight:550;white-space:nowrap;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.2s}
+  .chip:active{transform:scale(.95)}
+  .chip.on{border-color:rgba(124,196,255,.55);background:rgba(124,196,255,.16)}
+  .dot{width:15px;height:15px;border-radius:50%;box-shadow:inset -3px -3px 6px rgba(0,0,0,.55)}
+
+  /* ---------- Bottom HUD ---------- */
+  #hud{position:fixed;z-index:30;left:12px;right:12px;bottom:calc(12px + var(--safe-b));
+    background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:10px 14px 12px;
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .hudrow{display:flex;align-items:center;gap:10px}
+  #playBtn{width:36px;height:36px;flex:0 0 auto;border-radius:11px;background:rgba(124,196,255,.16);
+    border:1px solid rgba(124,196,255,.35);display:grid;place-items:center}
+  #playBtn svg{width:16px;height:16px;fill:var(--accent);stroke:none}
+  .slwrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sllab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .sllab i{font-style:normal;color:var(--accent2);font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent) var(--p,30%),rgba(255,255,255,.14) var(--p,30%))}
+  input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:rgba(255,255,255,.14)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:#fff;margin-top:-6px;box-shadow:0 0 0 4px rgba(124,196,255,.22)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:#fff}
+  #toggles{display:flex;gap:6px;margin-top:9px;overflow-x:auto;scrollbar-width:none}
+  #toggles::-webkit-scrollbar{display:none}
+  .tg{flex:0 0 auto;padding:5px 11px;border-radius:9px;border:1px solid var(--line);font-size:11.5px;
+    color:var(--muted);background:rgba(255,255,255,.03);transition:.2s;white-space:nowrap}
+  .tg.on{color:var(--accent);border-color:rgba(124,196,255,.45);background:rgba(124,196,255,.13)}
+
+  /* ---------- Labels ---------- */
+  #labels{position:fixed;inset:0;z-index:20;pointer-events:none;overflow:hidden}
+  .lab{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font-size:11px;letter-spacing:.05em;color:rgba(230,238,255,.9);
+    text-shadow:0 1px 8px rgba(0,0,0,.95);white-space:nowrap;padding:2px 7px;border-radius:999px;
+    background:rgba(8,10,24,.4);border:1px solid rgba(255,255,255,.08);will-change:transform,opacity}
+  .lab.moon{font-size:9.5px;color:rgba(200,212,240,.72);background:transparent;border:0;padding:0}
+
+  /* ---------- Info panel ---------- */
+  #panel{position:fixed;z-index:40;right:0;top:0;bottom:0;width:392px;max-width:100vw;
+    background:var(--glass2);border-left:1px solid var(--line);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    transform:translateX(102%);transition:transform .42s cubic-bezier(.22,1,.36,1);
+    display:flex;flex-direction:column;box-shadow:-14px 0 50px rgba(0,0,0,.55)}
+  #panel.open{transform:none}
+  #phead{position:relative;padding:calc(18px + var(--safe-t)) 20px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  #pclose{position:absolute;top:calc(14px + var(--safe-t));right:14px;width:34px;height:34px;border-radius:11px;
+    background:rgba(255,255,255,.07);display:grid;place-items:center}
+  #pclose svg{width:16px;height:16px;stroke:var(--ink);stroke-width:1.8;fill:none;stroke-linecap:round}
+  #ptype{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  #pname{font-size:29px;font-weight:680;margin:4px 0 2px;letter-spacing:-.01em}
+  #palt{font-size:12.5px;color:var(--muted)}
+  #pbody{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:18px 20px calc(30px + var(--safe-b));
+    touch-action:pan-y;-webkit-overflow-scrolling:touch}
+  #pbody p{margin:0 0 14px;font-size:14.5px;line-height:1.62;color:#dde4f7}
+  .sechead{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    margin:22px 0 10px;font-weight:600}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+  .stat b{display:block;font-size:14.5px;font-weight:620;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;letter-spacing:.03em}
+  .fact{display:flex;gap:10px;margin-bottom:11px;font-size:13.5px;line-height:1.55;color:#d5ddf2}
+  .fact i{flex:0 0 auto;font-style:normal;font-size:15px;line-height:1.35}
+  #deepBtn{width:100%;margin-top:6px;padding:11px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(255,255,255,.045);font-size:12.5px;color:var(--accent);font-weight:600;letter-spacing:.03em}
+  #deep{display:none;margin-top:14px}
+  #deep.show{display:block}
+  #deep p{font-size:13.5px;color:#c6d0e8}
+  #gotoBtn{width:100%;margin-top:16px;padding:12px;border-radius:12px;border:1px solid rgba(124,196,255,.4);
+    background:rgba(124,196,255,.15);font-size:13px;color:var(--accent);font-weight:650;letter-spacing:.03em}
+  .cmp{margin-top:10px}
+  .cmpbar{height:8px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden;margin:5px 0 3px}
+  .cmpbar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .cmplab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted)}
+
+  /* ---------- Tooltip / hint ---------- */
+  #tip{position:fixed;z-index:35;pointer-events:none;padding:5px 10px;border-radius:9px;font-size:12px;
+    background:rgba(8,10,24,.9);border:1px solid var(--line);transform:translate(-50%,-155%);opacity:0;transition:opacity .15s;white-space:nowrap}
+  #tip.on{opacity:1}
+  #hint{position:fixed;z-index:25;left:50%;transform:translateX(-50%);top:calc(76px + var(--safe-t));
+    font-size:11.5px;color:var(--muted);background:var(--glass);border:1px solid var(--line);
+    padding:6px 14px;border-radius:999px;backdrop-filter:blur(14px);transition:opacity .5s;pointer-events:none;text-align:center}
+  #hint.hide{opacity:0}
+
+  /* ---------- Help sheet ---------- */
+  #help{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;
+    background:rgba(3,4,12,.72);backdrop-filter:blur(8px)}
+  #help.open{display:flex}
+  #helpCard{width:100%;max-width:420px;max-height:82vh;overflow-y:auto;background:var(--glass2);
+    border:1px solid var(--line);border-radius:20px;padding:22px}
+  #helpCard h3{margin:0 0 4px;font-size:19px}
+  #helpCard .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .hrow{display:flex;gap:12px;margin-bottom:13px;font-size:13.5px;line-height:1.5}
+  .hrow i{flex:0 0 26px;font-style:normal;font-size:17px;text-align:center}
+  .hrow b{display:block;font-weight:600;font-size:13.5px}
+  .hrow span{color:var(--muted);font-size:12.5px}
+  #helpClose{width:100%;margin-top:8px;padding:12px;border-radius:12px;background:rgba(124,196,255,.16);
+    border:1px solid rgba(124,196,255,.36);color:var(--accent);font-weight:650;font-size:13px}
+
+  @media (max-width:640px){
+    #panel{left:0;right:0;top:auto;bottom:0;width:100%;height:62vh;border-left:0;border-top:1px solid var(--line);
+      border-radius:22px 22px 0 0;transform:translateY(102%);box-shadow:0 -14px 50px rgba(0,0,0,.6)}
+    #panel.open{transform:none}
+    #phead{padding:20px 18px 14px}
+    #phead::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);
+      width:38px;height:4px;border-radius:4px;background:rgba(255,255,255,.2)}
+    #pclose{top:14px;right:12px}
+    #pname{font-size:25px}
+    #pbody{padding:16px 18px calc(24px + var(--safe-b))}
+    #brand b{font-size:13.5px}
+    #brand span{display:none}
+  }
+  @media (min-width:641px){
+    #panel.open ~ #nav,#panel.open ~ #hud{padding-right:0}
+  }
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="orbit-spin"><div class="orbit-core"></div></div>
+  <div id="loadTxt">Memuat tata surya…</div>
+  <div id="barWrap"><div id="bar"></div></div>
+</div>
+
+<div id="labels"></div>
+<div id="tip"></div>
+<div id="hint"></div>
+
+<div id="top">
+  <div id="brand"><b data-t="title">Jelajah Tata Surya</b><span data-t="sub">Museum Antariksa Interaktif</span></div>
+  <div class="pill">
+    <button id="langID" class="on">ID</button>
+    <button id="langEN">EN</button>
+  </div>
+  <button class="iconbtn" id="helpBtn" aria-label="help">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.9 2.9 0 015.5 1.2c0 2-2.7 2.4-2.7 4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button class="iconbtn" id="homeBtn" aria-label="reset">
+    <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+  </button>
+</div>
+
+<div id="nav"></div>
+
+<div id="hud">
+  <div class="hudrow">
+    <button id="playBtn" aria-label="play"><svg id="playIco" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+    <div class="slwrap">
+      <div class="sllab"><span data-t="speed">Kecepatan waktu</span><i id="spdVal">10 hari/detik</i></div>
+      <input type="range" id="spd" min="0" max="100" value="63">
+    </div>
+  </div>
+  <div id="toggles">
+    <button class="tg on" id="tgOrbit" data-t="tgOrbit">Garis orbit</button>
+    <button class="tg on" id="tgLabel" data-t="tgLabel">Nama planet</button>
+    <button class="tg on" id="tgBelt" data-t="tgBelt">Sabuk asteroid</button>
+    <button class="tg on" id="tgMoon" data-t="tgMoon">Bulan</button>
+    <button class="tg" id="tgTop" data-t="tgTop">Tampak atas</button>
+  </div>
+</div>
+
+<div id="panel">
+  <div id="phead">
+    <button id="pclose" aria-label="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div id="ptype"></div>
+    <div id="pname"></div>
+    <div id="palt"></div>
+  </div>
+  <div id="pbody"></div>
+</div>
+
+<div id="help"><div id="helpCard"></div></div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+}}
+</script>
+
+<script>
+/* ============================================================
+   DATA · Tata Surya / Solar System
+   Angka astronomi: NASA Planetary Fact Sheet + IAU MPC (2026)
+   ============================================================ */
+const S = {                       // konstanta skala tampilan (edukatif, dikompres)
+  sizeBase: 1.40, sizeExp: 0.42,  // radius tampil = sizeBase * (R/R_bumi)^sizeExp
+  orbBase: 18, orbK: 30, orbExp: 0.55, // jarak tampil = orbBase + orbK * AU^orbExp
+  sunR: 9.0
+};
+const rDisp = km => S.sizeBase * Math.pow(km / 6371, S.sizeExp);
+const dDisp = au => S.orbBase + S.orbK * Math.pow(au, S.orbExp);
+
+const UI = {
+  id: {
+    title: "Jelajah Tata Surya", sub: "Museum Antariksa Interaktif",
+    loading: "Memuat tata surya…",
+    speed: "Kecepatan waktu", perSec: "hari/detik", paused: "dijeda",
+    tgOrbit: "Garis orbit", tgLabel: "Nama planet", tgBelt: "Sabuk asteroid",
+    tgMoon: "Bulan", tgTop: "Tampak atas",
+    hint: "Seret untuk memutar · Cubit atau gulir untuk zoom · Ketuk planet untuk info",
+    hintDesk: "Seret untuk memutar · Gulir untuk zoom · Klik planet untuk info",
+    star: "Bintang", planet: "Planet", dwarf: "Planet Kerdil", region: "Kawasan", moon: "Satelit Alami",
+    diameter: "Diameter", distance: "Jarak dari Matahari", year: "Satu tahun", day: "Satu hari",
+    moons: "Jumlah bulan", gravity: "Gravitasi", temp: "Suhu rata-rata", speedOrb: "Kecepatan orbit",
+    factsHead: "Tahukah kamu?", statsHead: "Data utama", deepHead: "Penjelasan lengkap",
+    more: "Baca penjelasan lengkap", less: "Sembunyikan penjelasan",
+    goto: "Terbangkan aku ke sini", moonsHead: "Bulan utama",
+    cmpSize: "Ukuran dibanding Bumi", cmpDay: "Panjang hari dibanding Bumi",
+    earthUnit: "Bumi = 1", days: "hari", years: "tahun", hours: "jam", none: "tidak ada",
+    retro: "berlawanan arah (retrograde)",
+    helpTitle: "Cara menjelajah", helpSub: "Tiga gerakan saja, lalu tinggal seru-seruan.",
+    h1t: "Putar pandangan", h1d: "Seret satu jari di layar (atau tahan klik kiri lalu gerakkan mouse).",
+    h2t: "Zoom masuk & keluar", h2d: "Cubit dengan dua jari, atau gulir roda mouse. Dekati planet sampai terlihat permukaannya.",
+    h3t: "Ketuk planet", h3d: "Ketuk bola planet atau tombol namanya di bawah untuk membuka info detail dan terbang ke sana.",
+    h4t: "Atur waktu", h4d: "Geser slider untuk mempercepat atau memperlambat orbit. Tekan tombol jeda untuk membekukan tata surya.",
+    h5t: "Catatan skala", h5d: "Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar. Kalau digambar sesuai skala asli, Bumi hanya sebesar titik dan Neptunus berada 100 layar jauhnya.",
+    close: "Mengerti, ayo mulai",
+    scaleNote: "Skala edukatif — jarak & ukuran dikompres agar mudah dilihat.",
+    moonNote: "Jumlah bulan terus bertambah seiring penemuan baru (data IAU 2026)."
+  },
+  en: {
+    title: "Explore the Solar System", sub: "Interactive Space Museum",
+    loading: "Loading the solar system…",
+    speed: "Time speed", perSec: "days/sec", paused: "paused",
+    tgOrbit: "Orbit lines", tgLabel: "Planet names", tgBelt: "Asteroid belt",
+    tgMoon: "Moons", tgTop: "Top view",
+    hint: "Drag to rotate · Pinch or scroll to zoom · Tap a planet for info",
+    hintDesk: "Drag to rotate · Scroll to zoom · Click a planet for info",
+    star: "Star", planet: "Planet", dwarf: "Dwarf Planet", region: "Region", moon: "Natural Satellite",
+    diameter: "Diameter", distance: "Distance from Sun", year: "One year", day: "One day",
+    moons: "Number of moons", gravity: "Gravity", temp: "Average temperature", speedOrb: "Orbital speed",
+    factsHead: "Did you know?", statsHead: "Key data", deepHead: "Full explanation",
+    more: "Read the full explanation", less: "Hide explanation",
+    goto: "Fly me there", moonsHead: "Major moons",
+    cmpSize: "Size compared to Earth", cmpDay: "Day length compared to Earth",
+    earthUnit: "Earth = 1", days: "days", years: "years", hours: "hours", none: "none",
+    retro: "backwards (retrograde)",
+    helpTitle: "How to explore", helpSub: "Three moves to learn, then just enjoy the ride.",
+    h1t: "Rotate the view", h1d: "Drag one finger across the screen (or hold left-click and move the mouse).",
+    h2t: "Zoom in & out", h2d: "Pinch with two fingers, or scroll the mouse wheel. Get close enough to see a planet's surface.",
+    h3t: "Tap a planet", h3d: "Tap the planet itself or its name button below to open the detail panel and fly there.",
+    h4t: "Control time", h4d: "Slide to speed up or slow down the orbits. Hit pause to freeze the whole solar system.",
+    h5t: "About the scale", h5d: "Distances and sizes are deliberately compressed so every planet fits on one screen. At true scale Earth would be a single pixel and Neptune would sit 100 screens away.",
+    close: "Got it, let's go",
+    scaleNote: "Educational scale — distances & sizes are compressed for visibility.",
+    moonNote: "Moon counts keep rising as new discoveries are confirmed (IAU, 2026)."
+  }
+};
+
+const TEX = "https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/";
+
+const BODIES = [
+{
+  key:"sun", type:"star", color:"#ffb347", emissive:true,
+  name:{id:"Matahari",en:"Sun"}, alt:{id:"Sol · bintang induk kita",en:"Sol · our parent star"},
+  map:TEX+"sunmap.jpg",
+  radiusKm:696340, dispR:S.sunR, dist:0, orbitDays:0, rotHours:609.12, tilt:7.25, inc:0, ecc:0,
+  moonsN:0, gravity:274, tempC:5505, orbKms:0,
+  desc:{
+    id:"Matahari adalah bintang di pusat tata surya kita — sebuah bola gas panas raksasa yang menahan semua planet tetap di orbitnya. Massanya sekitar 99,86% dari seluruh massa tata surya, jadi hampir semua \"isi\" tata surya sebenarnya adalah Matahari. Cahayanya butuh 8 menit 20 detik untuk sampai ke Bumi.",
+    en:"The Sun is the star at the centre of our solar system — a giant ball of hot gas whose gravity keeps every planet in orbit. It holds about 99.86% of all the mass in the solar system, so almost everything here is, quite literally, the Sun. Its light takes 8 minutes and 20 seconds to reach Earth."
+  },
+  deep:{
+    id:"Di inti Matahari, suhu mencapai sekitar 15 juta °C dan tekanannya begitu besar sehingga inti-inti atom hidrogen melebur menjadi helium. Proses yang disebut fusi nuklir ini mengubah sekitar 4 juta ton materi menjadi energi murni setiap detik. Energi itu butuh puluhan ribu tahun untuk merambat keluar dari inti, lalu hanya delapan menit untuk melintasi ruang hampa menuju Bumi.\n\nPermukaan yang kita lihat disebut fotosfer, bersuhu sekitar 5.500 °C. Di atasnya ada korona — atmosfer luar Matahari yang justru jauh lebih panas (lebih dari sejuta derajat), sebuah teka-teki yang sampai sekarang masih diteliti para astronom. Matahari saat ini berumur sekitar 4,6 miliar tahun dan berada di tengah masa hidupnya; sekitar 5 miliar tahun lagi ia akan mengembang menjadi raksasa merah.",
+    en:"In the Sun's core, temperatures reach about 15 million °C and pressures are so extreme that hydrogen nuclei fuse into helium. This process — nuclear fusion — converts roughly 4 million tonnes of matter into pure energy every second. That energy takes tens of thousands of years to work its way out of the core, then just eight minutes to cross empty space to Earth.\n\nThe surface we see is the photosphere, at about 5,500 °C. Above it lies the corona, the Sun's outer atmosphere, which is bafflingly hotter — over a million degrees — a puzzle astronomers are still working on. The Sun is around 4.6 billion years old and roughly halfway through its life; in about 5 billion years it will swell into a red giant."
+  },
+  facts:[
+    {ic:"🌍",id:"Sekitar 1,3 juta Bumi bisa dijejalkan ke dalam Matahari.",en:"About 1.3 million Earths could fit inside the Sun."},
+    {ic:"⏱️",id:"Matahari mengubah 4 juta ton massa menjadi energi setiap detik — dan sudah melakukannya selama 4,6 miliar tahun.",en:"The Sun turns 4 million tonnes of mass into energy every second — and has done so for 4.6 billion years."},
+    {ic:"🌀",id:"Matahari tidak berputar sebagai satu benda padat: khatulistiwanya berputar dalam 25 hari, tapi kutubnya butuh 35 hari.",en:"The Sun doesn't spin as a solid body: its equator rotates in 25 days, but its poles take 35."}
+  ]
+},
+{
+  key:"mercury", type:"planet", color:"#a8a29b",
+  name:{id:"Merkurius",en:"Mercury"}, alt:{id:"Planet terkecil & terdekat dari Matahari",en:"Smallest planet, closest to the Sun"},
+  map:TEX+"mercurymap.jpg", bump:TEX+"mercurybump.jpg",
+  radiusKm:2440, dist:0.387, orbitDays:87.97, rotHours:1407.6, tilt:0.03, inc:7.0, ecc:0.2056,
+  moonsN:0, gravity:3.7, tempC:167, orbKms:47.4,
+  desc:{
+    id:"Merkurius adalah planet terkecil dan yang paling dekat dengan Matahari. Karena hampir tak punya atmosfer, panas siang hari langsung lolos ke angkasa saat malam tiba — sehingga suhunya berayun ekstrem, dari 427 °C menjadi −173 °C. Permukaannya penuh kawah, sangat mirip Bulan kita.",
+    en:"Mercury is the smallest planet and the closest to the Sun. With almost no atmosphere, the daytime heat escapes straight back into space at night — so temperatures swing wildly, from 427 °C down to −173 °C. Its cratered surface looks a lot like our Moon."
+  },
+  deep:{
+    id:"Merkurius mengelilingi Matahari hanya dalam 88 hari Bumi, tercepat di antara semua planet — itulah sebabnya bangsa Romawi menamainya dari dewa pembawa pesan yang bersayap. Namun rotasinya justru sangat lambat: satu putaran penuh butuh 59 hari Bumi. Kombinasi keduanya menghasilkan resonansi 3:2 yang aneh — Merkurius berputar tepat tiga kali setiap dua kali mengelilingi Matahari, sehingga satu \"hari matahari\" di sana berlangsung 176 hari Bumi.\n\nPlanet ini punya inti besi yang sangat besar, mengisi sekitar 85% jari-jarinya, dan menghasilkan medan magnet lemah yang tidak dimiliki Venus maupun Mars. Orbitnya juga paling lonjong di antara planet-planet, dan pergeseran halus pada orbit itu (presesi perihelion) dulu tak bisa dijelaskan fisika Newton — sampai teori relativitas umum Einstein memecahkannya pada 1915.",
+    en:"Mercury circles the Sun in just 88 Earth days — faster than any other planet, which is why the Romans named it after their winged messenger god. Yet it spins remarkably slowly: one rotation takes 59 Earth days. Together these produce a strange 3:2 resonance — Mercury turns exactly three times for every two orbits — so a single solar day there lasts 176 Earth days.\n\nThe planet has an outsized iron core filling about 85% of its radius, generating a weak magnetic field that neither Venus nor Mars possesses. Its orbit is also the most elliptical of the planets, and the subtle drift of that orbit (perihelion precession) defied Newtonian physics until Einstein's general relativity explained it in 1915."
+  },
+  facts:[
+    {ic:"🌡️",id:"Meski paling dekat dengan Matahari, Merkurius bukan planet terpanas — Venus mengalahkannya.",en:"Despite being closest to the Sun, Mercury is not the hottest planet — Venus beats it."},
+    {ic:"🧊",id:"Di dasar kawah kutubnya yang tak pernah kena sinar Matahari, ada es air yang bertahan miliaran tahun.",en:"Water ice survives for billions of years in polar craters that sunlight never reaches."},
+    {ic:"📅",id:"Satu hari di Merkurius (dari matahari terbit ke terbit berikutnya) berlangsung dua tahun Merkurius.",en:"One Mercurian day (sunrise to sunrise) lasts two Mercurian years."}
+  ]
+},
+{
+  key:"venus", type:"planet", color:"#e6c489",
+  name:{id:"Venus",en:"Venus"}, alt:{id:"Planet terpanas · kembaran Bumi yang gagal",en:"Hottest planet · Earth's failed twin"},
+  map:TEX+"venusmap.jpg", bump:TEX+"venusbump.jpg",
+  radiusKm:6052, dist:0.723, orbitDays:224.7, rotHours:-5832.5, tilt:177.4, inc:3.39, ecc:0.0068,
+  moonsN:0, gravity:8.87, tempC:464, orbKms:35.0,
+  desc:{
+    id:"Venus hampir sebesar Bumi, tapi nasibnya jauh berbeda. Atmosfernya yang tebal dan penuh karbon dioksida memerangkap panas sampai suhu permukaannya mencapai 464 °C — cukup untuk melelehkan timbal. Tekanan udaranya 92 kali lipat Bumi, setara berada 900 meter di bawah laut.",
+    en:"Venus is nearly the same size as Earth, but its fate went very differently. A thick carbon-dioxide atmosphere traps heat until the surface reaches 464 °C — hot enough to melt lead. The air pressure is 92 times Earth's, like standing 900 metres under the ocean."
+  },
+  deep:{
+    id:"Venus adalah contoh paling dramatis tentang efek rumah kaca yang lepas kendali. Miliaran tahun lalu Venus mungkin punya samudra, tapi Matahari yang perlahan memanas menguapkannya. Uap air memerangkap lebih banyak panas, yang menguapkan lebih banyak air lagi — sebuah lingkaran umpan balik yang berakhir dengan planet gersang berselimut awan asam sulfat.\n\nVenus juga berputar mundur: bila kamu berdiri di sana, Matahari terbit dari barat. Rotasinya begitu lambat (243 hari Bumi) sehingga satu hari Venus lebih panjang daripada satu tahun Venus (225 hari). Penyebab rotasi terbalik ini masih diperdebatkan — kemungkinan tumbukan raksasa di masa muda, atau tarikan pasang surut atmosfer yang tebal selama miliaran tahun.",
+    en:"Venus is the most dramatic example we know of a runaway greenhouse effect. Billions of years ago it may have had oceans, but a slowly brightening Sun boiled them away. Water vapour trapped more heat, which evaporated more water — a feedback loop that ended in a parched world wrapped in sulphuric-acid clouds.\n\nVenus also spins backwards: stand on its surface and the Sun would rise in the west. It rotates so slowly (243 Earth days) that a Venusian day is longer than a Venusian year (225 days). Why it turned over is still debated — perhaps a giant impact early on, or billions of years of tidal tugging on its heavy atmosphere."
+  },
+  facts:[
+    {ic:"🔄",id:"Satu hari di Venus lebih lama daripada satu tahunnya.",en:"A day on Venus lasts longer than its entire year."},
+    {ic:"✨",id:"Venus adalah objek paling terang di langit malam setelah Bulan — itulah \"Bintang Kejora\".",en:"Venus is the brightest object in the night sky after the Moon — the classic 'evening star'."},
+    {ic:"☔",id:"Hujan di Venus terbuat dari asam sulfat, dan menguap sebelum sempat menyentuh tanah.",en:"Venus rains sulphuric acid — which evaporates before it ever reaches the ground."}
+  ]
+},
+{
+  key:"earth", type:"planet", color:"#4f93d1",
+  name:{id:"Bumi",en:"Earth"}, alt:{id:"Rumah kita · satu-satunya dunia berpenghuni yang diketahui",en:"Our home · the only known living world"},
+  map:TEX+"earthmap1k.jpg", bump:TEX+"earthbump1k.jpg", spec:TEX+"earthspec1k.jpg",
+  clouds:TEX+"earthcloudmap.jpg", cloudsAlpha:TEX+"earthcloudmaptrans.jpg", atmo:"#6bb8ff",
+  radiusKm:6371, dist:1.0, orbitDays:365.256, rotHours:23.934, tilt:23.44, inc:0, ecc:0.0167,
+  moonsN:1, gravity:9.81, tempC:15, orbKms:29.8,
+  moons:[{key:"moon",name:{id:"Bulan",en:"Moon"},r:0.36,d:3.3,p:27.32,map:TEX+"moonmap1k.jpg",color:"#c9c6bd"}],
+  desc:{
+    id:"Bumi adalah satu-satunya tempat di alam semesta yang kita tahu pasti dihuni kehidupan. Jaraknya dari Matahari pas: cukup hangat agar air tetap cair, cukup dingin agar tidak menguap. Sekitar 71% permukaannya tertutup air, dan atmosfernya yang kaya oksigen melindungi kita dari radiasi berbahaya.",
+    en:"Earth is the only place in the universe we know for certain hosts life. Its distance from the Sun is just right: warm enough for liquid water, cool enough that it doesn't boil away. About 71% of the surface is water, and an oxygen-rich atmosphere shields us from harmful radiation."
+  },
+  deep:{
+    id:"Yang membuat Bumi istimewa bukan satu hal, melainkan kombinasi yang beruntung. Inti besi cairnya menghasilkan medan magnet yang membelokkan angin surya, mencegah atmosfer terkelupas seperti yang terjadi pada Mars. Lempeng tektonik terus mendaur ulang karbon antara batuan, laut, dan udara, menjaga iklim tetap stabil selama miliaran tahun.\n\nKemiringan sumbu 23,4° memberi kita musim: sepanjang tahun belahan utara dan selatan bergantian condong ke arah Matahari. Kemiringan itu dijaga tetap stabil oleh Bulan — satelit yang luar biasa besar dibanding planetnya, kemungkinan besar terbentuk dari tumbukan raksasa dengan objek seukuran Mars sekitar 4,5 miliar tahun lalu.",
+    en:"What makes Earth special isn't one thing but a lucky combination. Its liquid iron core generates a magnetic field that deflects the solar wind, preventing the atmosphere from being stripped away as Mars's was. Plate tectonics continuously recycle carbon between rock, ocean and air, keeping the climate stable over billions of years.\n\nOur 23.4° axial tilt gives us seasons: through the year the northern and southern hemispheres take turns leaning toward the Sun. That tilt is held steady by the Moon — a satellite extraordinarily large relative to its planet, most likely formed when a Mars-sized body struck the young Earth some 4.5 billion years ago."
+  },
+  facts:[
+    {ic:"🌊",id:"Lebih dari 80% lautan Bumi belum pernah dipetakan atau dijelajahi manusia.",en:"More than 80% of Earth's ocean has never been mapped or explored."},
+    {ic:"🌕",id:"Bulan menjauh dari Bumi sekitar 3,8 cm setiap tahun — kira-kira secepat kuku jari tumbuh.",en:"The Moon drifts about 3.8 cm further away each year — roughly the speed a fingernail grows."},
+    {ic:"🚀",id:"Bumi melaju mengelilingi Matahari dengan kecepatan 107.000 km/jam, dan kita sama sekali tidak merasakannya.",en:"Earth races around the Sun at 107,000 km/h — and we feel absolutely nothing."}
+  ]
+},
+{
+  key:"mars", type:"planet", color:"#c1603f",
+  name:{id:"Mars",en:"Mars"}, alt:{id:"Planet Merah · target berikutnya manusia",en:"The Red Planet · humanity's next stop"},
+  map:TEX+"marsmap1k.jpg", bump:TEX+"marsbump1k.jpg", atmo:"#d98b6a",
+  radiusKm:3390, dist:1.524, orbitDays:686.98, rotHours:24.62, tilt:25.19, inc:1.85, ecc:0.0934,
+  moonsN:2, gravity:3.72, tempC:-65, orbKms:24.1,
+  moons:[
+    {key:"phobos",name:{id:"Phobos",en:"Phobos"},r:0.10,d:1.75,p:0.319,color:"#8c7f74"},
+    {key:"deimos",name:{id:"Deimos",en:"Deimos"},r:0.075,d:2.35,p:1.263,color:"#9c8f83"}
+  ],
+  desc:{
+    id:"Mars berwarna merah karena tanahnya kaya oksida besi — pada dasarnya karat. Ukurannya sekitar setengah Bumi, punya musim, tudung es kutub, dan hari yang panjangnya hampir sama (24 jam 37 menit). Inilah planet yang paling banyak dikunjungi wahana robotik kita.",
+    en:"Mars is red because its soil is rich in iron oxide — essentially rust. About half Earth's size, it has seasons, polar ice caps, and a day almost exactly as long as ours (24 hours 37 minutes). It is by far the most visited planet in our robotic exploration programme."
+  },
+  deep:{
+    id:"Mars menyimpan bukti kuat bahwa air pernah mengalir di permukaannya: dasar sungai purba, delta, mineral yang hanya terbentuk di air, dan endapan garam. Sekitar 3,5 miliar tahun lalu Mars mungkin punya danau, bahkan samudra dangkal di belahan utara. Lalu intinya mendingin, medan magnetnya melemah, dan angin surya perlahan mengikis atmosfernya sampai tinggal 1% kerapatan Bumi.\n\nMars juga memegang beberapa rekor tata surya. Olympus Mons adalah gunung berapi tertinggi yang diketahui — tingginya sekitar 22 km, hampir tiga kali Everest, dengan alas selebar Pulau Jawa. Valles Marineris adalah ngarai sepanjang 4.000 km, membentang seperti Grand Canyon yang memanjang dari Sabang sampai Merauke.",
+    en:"Mars carries strong evidence that water once flowed across it: ancient riverbeds, deltas, minerals that only form in water, and salt deposits. Around 3.5 billion years ago Mars may have had lakes and even a shallow northern ocean. Then its core cooled, its magnetic field faded, and the solar wind slowly stripped the atmosphere down to 1% of Earth's density.\n\nMars also holds several solar-system records. Olympus Mons is the tallest known volcano — about 22 km high, nearly three times Everest, with a base the size of a small country. Valles Marineris is a canyon system 4,000 km long, as if the Grand Canyon stretched clear across a continent."
+  },
+  facts:[
+    {ic:"🏔️",id:"Olympus Mons di Mars adalah gunung tertinggi di tata surya — hampir tiga kali tinggi Everest.",en:"Olympus Mons on Mars is the tallest mountain in the solar system — nearly three times Everest."},
+    {ic:"🌪️",id:"Badai debu Mars bisa menyelimuti seluruh planet dan berlangsung berbulan-bulan.",en:"Martian dust storms can swallow the entire planet and last for months."},
+    {ic:"🌑",id:"Phobos, bulan terbesar Mars, terus mendekat dan akan hancur menjadi cincin dalam ~50 juta tahun.",en:"Phobos, Mars's largest moon, is spiralling inward and will shatter into a ring in ~50 million years."}
+  ]
+},
+{
+  key:"jupiter", type:"planet", color:"#d8a173",
+  name:{id:"Jupiter",en:"Jupiter"}, alt:{id:"Raksasa gas · pelindung tata surya bagian dalam",en:"Gas giant · guardian of the inner solar system"},
+  map:TEX+"jupitermap.jpg", atmo:"#e0b78d",
+  radiusKm:69911, dist:5.203, orbitDays:4332.6, rotHours:9.93, tilt:3.13, inc:1.30, ecc:0.0489,
+  moonsN:101, gravity:24.79, tempC:-110, orbKms:13.1,
+  moons:[
+    {key:"io",name:{id:"Io",en:"Io"},r:0.34,d:6.4,p:1.769,color:"#e3d06a"},
+    {key:"europa",name:{id:"Europa",en:"Europa"},r:0.30,d:7.7,p:3.551,color:"#d8cfc0"},
+    {key:"ganymede",name:{id:"Ganimede",en:"Ganymede"},r:0.50,d:9.4,p:7.155,color:"#a89887"},
+    {key:"callisto",name:{id:"Kalisto",en:"Callisto"},r:0.46,d:11.4,p:16.689,color:"#7d7469"}
+  ],
+  desc:{
+    id:"Jupiter adalah planet terbesar — lebih dari dua kali massa semua planet lain digabungkan. Ia hampir seluruhnya terdiri dari hidrogen dan helium, tanpa permukaan padat untuk dipijak. Gravitasinya yang raksasa berperan sebagai \"penyapu\" komet dan asteroid, ikut melindungi planet-planet dalam.",
+    en:"Jupiter is the largest planet — more than twice the mass of every other planet combined. It is made almost entirely of hydrogen and helium, with no solid surface to stand on. Its enormous gravity acts as a cosmic vacuum cleaner for comets and asteroids, helping shield the inner planets."
+  },
+  deep:{
+    id:"Bintik Merah Besar Jupiter adalah badai antisiklon yang sudah diamati selama lebih dari 190 tahun secara berkelanjutan (dan mungkin sejak 1665). Lebarnya pernah mencapai tiga kali diameter Bumi, meski kini menyusut. Angin di sana bertiup hingga 430 km/jam.\n\nJupiter berotasi tercepat di antara semua planet — satu putaran hanya 9 jam 56 menit — sehingga bentuknya terlihat gepeng di kutub. Di kedalamannya, tekanan begitu ekstrem sampai hidrogen berubah menjadi cairan logam yang menghantarkan listrik, menghasilkan medan magnet 20.000 kali lebih kuat dari Bumi. Empat bulan terbesarnya — Io, Europa, Ganimede, Kalisto — ditemukan Galileo pada 1610, dan penemuan itu menjadi bukti pertama bahwa tidak semua benda langit mengorbit Bumi.",
+    en:"Jupiter's Great Red Spot is an anticyclonic storm that has been watched continuously for over 190 years (and possibly since 1665). It once spanned three Earth diameters, though it is now shrinking. Winds inside it reach 430 km/h.\n\nJupiter spins faster than any other planet — one rotation in just 9 hours 56 minutes — which visibly flattens it at the poles. Deep inside, pressures are so extreme that hydrogen becomes a liquid metal that conducts electricity, generating a magnetic field 20,000 times stronger than Earth's. Its four largest moons — Io, Europa, Ganymede, Callisto — were spotted by Galileo in 1610, the first proof that not everything orbits the Earth."
+  },
+  facts:[
+    {ic:"🔴",id:"Bintik Merah Besar adalah badai raksasa yang sudah berputar selama ratusan tahun.",en:"The Great Red Spot is a giant storm that has been spinning for centuries."},
+    {ic:"🌋",id:"Io, bulannya, adalah objek paling vulkanik di tata surya — lebih dari 400 gunung berapi aktif.",en:"Its moon Io is the most volcanic body in the solar system — over 400 active volcanoes."},
+    {ic:"💧",id:"Di bawah kerak es Europa diperkirakan ada samudra dengan air lebih banyak daripada seluruh lautan Bumi.",en:"Beneath Europa's icy crust lies an ocean thought to hold more water than all of Earth's seas."}
+  ]
+},
+{
+  key:"saturn", type:"planet", color:"#e0c98d",
+  name:{id:"Saturnus",en:"Saturn"}, alt:{id:"Permata bercincin · raja bulan",en:"The ringed jewel · king of moons"},
+  map:TEX+"saturnmap.jpg", atmo:"#efdcae",
+  ring:{inner:1.25, outer:2.30, map:TEX+"saturnringcolor.jpg", alpha:TEX+"saturnringpattern.gif", tiltWithPlanet:true},
+  radiusKm:58232, dist:9.537, orbitDays:10759, rotHours:10.66, tilt:26.73, inc:2.49, ecc:0.0565,
+  moonsN:285, gravity:10.44, tempC:-140, orbKms:9.7,
+  moons:[
+    {key:"enceladus",name:{id:"Enceladus",en:"Enceladus"},r:0.16,d:9.2,p:1.370,color:"#eef3f6"},
+    {key:"titan",name:{id:"Titan",en:"Titan"},r:0.50,d:12.2,p:15.945,color:"#d8a24a"}
+  ],
+  desc:{
+    id:"Saturnus terkenal karena sistem cincinnya yang menakjubkan — miliaran bongkahan es dan batu, dari sebesar butiran pasir hingga sebesar rumah, mengorbit dalam lapisan yang sangat tipis. Meski selebar 280.000 km, tebal cincin itu rata-rata hanya sekitar 10 meter.",
+    en:"Saturn is famous for its breathtaking ring system — billions of chunks of ice and rock, from grains of sand to house-sized boulders, orbiting in an astonishingly thin sheet. Though 280,000 km across, the rings average only about 10 metres thick."
+  },
+  deep:{
+    id:"Saturnus adalah planet paling ringan relatif terhadap ukurannya: kerapatannya hanya 0,687 g/cm³, lebih ringan daripada air. Kalau ada bak mandi yang cukup besar, Saturnus akan mengapung.\n\nCincinnya kemungkinan besar masih muda — data wahana Cassini menunjukkan usianya mungkin hanya 100 juta tahun, artinya dinosaurus mungkin melihat Saturnus tanpa cincin. Cincin itu juga perlahan \"hujan\" jatuh ke planet dan diperkirakan lenyap dalam beberapa ratus juta tahun.\n\nSaturnus kini memegang gelar planet dengan bulan terbanyak — 285 bulan terkonfirmasi per Maret 2026 menurut IAU. Yang paling menarik adalah Titan, satu-satunya bulan dengan atmosfer tebal dan satu-satunya dunia selain Bumi yang punya danau dan sungai permukaan — meski isinya metana cair, bukan air.",
+    en:"Saturn is the least dense planet relative to its size: just 0.687 g/cm³, lighter than water. Given a big enough bathtub, Saturn would float.\n\nIts rings are probably young — Cassini data suggests they may be only 100 million years old, meaning dinosaurs might have seen a ringless Saturn. They are also slowly raining down onto the planet and may vanish within a few hundred million years.\n\nSaturn currently holds the title of most moons — 285 confirmed as of March 2026 according to the IAU. The most intriguing is Titan, the only moon with a thick atmosphere and the only world besides Earth with lakes and rivers on its surface — though they are filled with liquid methane, not water."
+  },
+  facts:[
+    {ic:"🛁",id:"Saturnus lebih ringan daripada air — kalau ada bak mandi cukup besar, ia akan mengapung.",en:"Saturn is less dense than water — with a big enough bathtub, it would float."},
+    {ic:"💍",id:"Cincin Saturnus selebar 280.000 km, tapi tebalnya rata-rata hanya sekitar 10 meter.",en:"Saturn's rings span 280,000 km but average only about 10 metres in thickness."},
+    {ic:"🌊",id:"Titan punya sungai dan danau — tapi berisi metana cair, bukan air.",en:"Titan has rivers and lakes — filled with liquid methane instead of water."}
+  ]
+},
+{
+  key:"uranus", type:"planet", color:"#8fd3dd",
+  name:{id:"Uranus",en:"Uranus"}, alt:{id:"Raksasa es yang berguling",en:"The ice giant that rolls on its side"},
+  map:TEX+"uranusmap.jpg", atmo:"#a9e4ec",
+  ring:{inner:1.55, outer:2.00, map:TEX+"uranusringcolour.jpg", alpha:TEX+"uranusringtrans.gif", tiltWithPlanet:true, faint:true},
+  radiusKm:25362, dist:19.191, orbitDays:30688, rotHours:-17.24, tilt:97.77, inc:0.77, ecc:0.0457,
+  moonsN:29, gravity:8.87, tempC:-195, orbKms:6.8,
+  moons:[{key:"titania",name:{id:"Titania",en:"Titania"},r:0.26,d:6.6,p:8.706,color:"#a8a29d"}],
+  desc:{
+    id:"Uranus berputar miring hampir 98° — praktis berguling mengelilingi Matahari, bukan berputar tegak seperti planet lain. Akibatnya, setiap kutub mengalami 42 tahun siang terus-menerus, lalu 42 tahun malam. Warna birunya berasal dari gas metana di atmosfernya.",
+    en:"Uranus is tipped almost 98° — it effectively rolls around the Sun instead of spinning upright like the others. As a result each pole gets 42 years of continuous daylight followed by 42 years of night. Its blue-green colour comes from methane in its atmosphere."
+  },
+  deep:{
+    id:"Penyebab kemiringan ekstrem Uranus kemungkinan besar adalah tumbukan dengan objek seukuran Bumi di masa awal tata surya — atau serangkaian tumbukan yang lebih kecil. Cincin dan bulan-bulannya ikut miring mengikuti planetnya, jadi seluruh sistem itu tampak berputar seperti target panah dilihat dari Bumi.\n\nUranus dan Neptunus disebut \"raksasa es\" karena di bawah atmosfer hidrogen-helium mereka terdapat mantel panas dan padat berisi air, metana, dan amonia. Uranus punya atmosfer terdingin yang pernah diukur di tata surya, mencapai −224 °C. Anehnya, ia memancarkan panas internal jauh lebih sedikit dibanding raksasa lain — sebuah misteri yang belum terpecahkan. Sampai kini Uranus baru dikunjungi satu kali, oleh Voyager 2 pada 1986.",
+    en:"Uranus's extreme tilt was most likely caused by a collision with an Earth-sized body early in the solar system's history — or a series of smaller impacts. Its rings and moons tilted along with it, so the whole system appears to spin like an archery target as seen from Earth.\n\nUranus and Neptune are called 'ice giants' because beneath their hydrogen-helium atmospheres lies a hot, dense mantle of water, methane and ammonia. Uranus has the coldest atmosphere ever measured in the solar system, reaching −224 °C. Oddly, it radiates far less internal heat than the other giants — a mystery still unsolved. It has been visited just once, by Voyager 2 in 1986."
+  },
+  facts:[
+    {ic:"🎳",id:"Uranus berputar menyamping, seolah menggelinding mengelilingi Matahari.",en:"Uranus spins on its side, as if rolling around the Sun."},
+    {ic:"❄️",id:"Suhu −224 °C menjadikan atmosfer Uranus yang terdingin di tata surya.",en:"At −224 °C, Uranus has the coldest atmosphere in the solar system."},
+    {ic:"🛰️",id:"Hanya satu wahana yang pernah mengunjunginya: Voyager 2, empat puluh tahun lalu.",en:"Only one spacecraft has ever visited: Voyager 2, four decades ago."}
+  ]
+},
+{
+  key:"neptune", type:"planet", color:"#3f62c9",
+  name:{id:"Neptunus",en:"Neptune"}, alt:{id:"Dunia berangin · planet terjauh",en:"The windy world · outermost planet"},
+  map:TEX+"neptunemap.jpg", atmo:"#5b7ff0",
+  radiusKm:24622, dist:30.07, orbitDays:60195, rotHours:16.11, tilt:28.32, inc:1.77, ecc:0.0113,
+  moonsN:18, gravity:11.15, tempC:-200, orbKms:5.4,
+  moons:[{key:"triton",name:{id:"Triton",en:"Triton"},r:0.32,d:6.8,p:-5.877,color:"#cfd6dc"}],
+  desc:{
+    id:"Neptunus adalah planet terjauh dari Matahari dan rumah bagi angin terkencang di tata surya — mencapai 2.100 km/jam, lebih cepat dari kecepatan suara di Bumi. Satu tahun di sana berlangsung 165 tahun Bumi, jadi Neptunus baru satu kali menyelesaikan orbit sejak ditemukan pada 1846.",
+    en:"Neptune is the most distant planet from the Sun and home to the fiercest winds in the solar system — up to 2,100 km/h, faster than the speed of sound on Earth. A year there lasts 165 Earth years, so Neptune has completed just one orbit since its discovery in 1846."
+  },
+  deep:{
+    id:"Neptunus punya kisah penemuan yang unik: ia ditemukan lewat matematika sebelum dilihat lewat teleskop. Para astronom memperhatikan orbit Uranus sedikit menyimpang dari perhitungan, lalu Urbain Le Verrier menghitung di mana planet tak dikenal itu seharusnya berada. Malam itu juga, pada 23 September 1846, Johann Galle mengarahkan teleskopnya ke koordinat tersebut dan langsung menemukannya.\n\nMeski menerima sinar Matahari 900 kali lebih sedikit dari Bumi, Neptunus memancarkan panas internal 2,6 kali lipat dari yang diserapnya — sumber energi yang menggerakkan badai dahsyatnya. Bulan terbesarnya, Triton, mengorbit berlawanan arah dengan rotasi planet, pertanda kuat bahwa ia adalah objek Sabuk Kuiper yang tertangkap gravitasi Neptunus.",
+    en:"Neptune has a remarkable discovery story: it was found with mathematics before anyone saw it through a telescope. Astronomers noticed Uranus's orbit deviating slightly from predictions, and Urbain Le Verrier calculated where an unseen planet must be. That same night — 23 September 1846 — Johann Galle pointed his telescope at those coordinates and found it immediately.\n\nThough it receives 900 times less sunlight than Earth, Neptune radiates 2.6 times more internal heat than it absorbs — the engine driving its violent storms. Its largest moon, Triton, orbits backwards relative to the planet's spin, strong evidence that it is a captured Kuiper Belt object."
+  },
+  facts:[
+    {ic:"💨",id:"Angin Neptunus mencapai 2.100 km/jam — tercepat di seluruh tata surya.",en:"Neptune's winds reach 2,100 km/h — the fastest anywhere in the solar system."},
+    {ic:"🔭",id:"Neptunus ditemukan lewat perhitungan matematika sebelum pernah dilihat orang.",en:"Neptune was discovered through mathematics before anyone had ever seen it."},
+    {ic:"🧊",id:"Triton mengorbit terbalik dan menyemburkan gaiser nitrogen dari permukaannya yang beku.",en:"Triton orbits backwards and erupts nitrogen geysers from its frozen surface."}
+  ]
+},
+{
+  key:"pluto", type:"dwarf", color:"#c9b299",
+  name:{id:"Pluto",en:"Pluto"}, alt:{id:"Planet kerdil · penjaga Sabuk Kuiper",en:"Dwarf planet · sentinel of the Kuiper Belt"},
+  map:TEX+"plutomap1k.jpg", bump:TEX+"plutobump1k.jpg",
+  radiusKm:1188, dist:39.48, orbitDays:90560, rotHours:-153.3, tilt:122.5, inc:17.16, ecc:0.2488,
+  moonsN:5, gravity:0.62, tempC:-229, orbKms:4.7,
+  moons:[{key:"charon",name:{id:"Charon",en:"Charon"},r:0.34,d:2.7,p:6.387,color:"#9c948b"}],
+  desc:{
+    id:"Pluto adalah planet kerdil di Sabuk Kuiper, wilayah beku di tepi tata surya. Sempat berstatus planet kesembilan selama 76 tahun, statusnya diubah IAU pada 2006 karena orbitnya masih dipenuhi objek-objek lain. Ukurannya lebih kecil daripada Bulan kita.",
+    en:"Pluto is a dwarf planet in the Kuiper Belt, the frozen frontier at the edge of the solar system. Counted as the ninth planet for 76 years, it was reclassified by the IAU in 2006 because its orbital neighbourhood is still full of other objects. It is smaller than our own Moon."
+  },
+  deep:{
+    id:"Selama puluhan tahun Pluto hanyalah titik kabur, sampai wahana New Horizons melintas dekat pada Juli 2015 dan mengubah segalanya. Yang terlihat jauh melampaui dugaan: pegunungan es air setinggi 3.500 meter, gletser nitrogen yang mengalir, kabut berlapis di atmosfer tipisnya, dan dataran berbentuk hati bernama Sputnik Planitia yang permukaannya begitu mulus sehingga hampir tak berkawah — pertanda ia masih diperbarui secara geologis.\n\nOrbit Pluto sangat lonjong dan miring 17° dari bidang orbit planet lain. Antara 1979 dan 1999, Pluto sebenarnya berada lebih dekat ke Matahari daripada Neptunus. Bulan terbesarnya, Charon, begitu besar dibanding Pluto sehingga keduanya saling mengorbit sebuah titik di ruang kosong di antara mereka — sistem planet ganda sejati.",
+    en:"For decades Pluto was just a blurry dot, until New Horizons flew past in July 2015 and changed everything. What appeared far exceeded expectations: water-ice mountains 3,500 metres tall, flowing nitrogen glaciers, layered hazes in its thin atmosphere, and a heart-shaped plain called Sputnik Planitia so smooth it is essentially crater-free — a sign it is still being geologically resurfaced.\n\nPluto's orbit is highly elliptical and tilted 17° from the plane of the other planets. Between 1979 and 1999 it was actually closer to the Sun than Neptune. Its largest moon, Charon, is so big relative to Pluto that the two orbit a point in empty space between them — a genuine double system."
+  },
+  facts:[
+    {ic:"💛",id:"Pluto punya \"jantung\" raksasa di permukaannya: dataran es nitrogen selebar 1.000 km.",en:"Pluto wears a giant heart on its surface: a nitrogen-ice plain 1,000 km wide."},
+    {ic:"⚖️",id:"Pluto dan Charon saling mengorbit titik kosong di antara keduanya — bukan Charon mengelilingi Pluto.",en:"Pluto and Charon orbit a point in empty space between them — Charon doesn't simply circle Pluto."},
+    {ic:"📜",id:"Nama Pluto diusulkan oleh Venetia Burney, seorang anak berusia 11 tahun dari Inggris, pada 1930.",en:"Pluto was named by Venetia Burney, an 11-year-old English schoolgirl, in 1930."}
+  ]
+}
+];
+
+const BELT = {
+  key:"belt", type:"region", color:"#8b8378",
+  name:{id:"Sabuk Asteroid",en:"Asteroid Belt"},
+  alt:{id:"Antara Mars dan Jupiter · sisa pembentukan tata surya",en:"Between Mars and Jupiter · leftovers of planet formation"},
+  desc:{
+    id:"Sabuk asteroid adalah cincin lebar berisi jutaan bongkahan batu dan logam yang mengorbit antara Mars dan Jupiter. Meski di film terlihat rapat, kenyataannya sangat lengang — jarak antar-asteroid rata-rata ratusan ribu kilometer, sehingga wahana antariksa melewatinya tanpa kesulitan.",
+    en:"The asteroid belt is a broad ring of millions of rocky and metallic bodies orbiting between Mars and Jupiter. Films make it look crowded, but it is almost empty — asteroids are typically hundreds of thousands of kilometres apart, so spacecraft cross it without trouble."
+  },
+  deep:{
+    id:"Total massa seluruh sabuk asteroid hanya sekitar 3% massa Bulan kita. Sabuk ini bukan sisa planet yang meledak, melainkan bahan mentah yang tak pernah sempat menyatu menjadi planet — tarikan gravitasi Jupiter yang raksasa terus mengaduk wilayah itu sehingga bongkahan-bongkahan kecil bertabrakan terlalu cepat untuk saling menempel.\n\nObjek terbesarnya adalah Ceres, berdiameter 940 km, yang cukup besar untuk berbentuk bulat dan kini diklasifikasikan sebagai planet kerdil. Meteorit yang jatuh ke Bumi sebagian besar berasal dari sabuk ini, dan karena usianya sama tuanya dengan tata surya, batuan itu menjadi kapsul waktu yang memberi tahu kita bagaimana planet-planet terbentuk 4,6 miliar tahun lalu.",
+    en:"The entire belt's mass adds up to only about 3% of our Moon. It is not the debris of an exploded planet but raw material that never managed to coalesce — Jupiter's massive gravity keeps stirring the region so the fragments collide too fast to stick together.\n\nIts largest member is Ceres, 940 km across, big enough to be round and now classified as a dwarf planet. Most meteorites that fall to Earth come from this belt, and because they are as old as the solar system itself, they act as time capsules telling us how the planets formed 4.6 billion years ago."
+  },
+  facts:[
+    {ic:"🪨",id:"Kalau semua asteroid disatukan, massanya hanya sekitar 3% massa Bulan.",en:"Combine every asteroid and you'd get only about 3% of the Moon's mass."},
+    {ic:"🚀",id:"Sabuknya sangat lengang — wahana antariksa melintas tanpa perlu menghindar sama sekali.",en:"The belt is so sparse that spacecraft fly through without dodging anything."},
+    {ic:"⏳",id:"Batuan di sini berumur 4,6 miliar tahun — sisa bahan pembangun planet yang tak pernah terpakai.",en:"These rocks are 4.6 billion years old — leftover planet-building material never used."}
+  ]
+};
+
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+/* ================= state ================= */
+let lang = 'id';   // default Bahasa Indonesia; tombol ID/EN mengubahnya kapan saja
+const isTouch = matchMedia('(pointer:coarse)').matches;
+const isSmall = innerWidth < 641;
+let simDays = 0;            // waktu simulasi (hari)
+let daysPerSec = 10;
+let paused = false;
+let focusKey = null;
+let followObj = null;
+
+const D2R = Math.PI/180;
+const el = id => document.getElementById(id);
+const t = k => UI[lang][k];
+
+/* ================= renderer ================= */
+const renderer = new THREE.WebGLRenderer({antialias:!isSmall, powerPreference:'high-performance', logarithmicDepthBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isSmall?2:2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.98;
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.position='fixed';
+renderer.domElement.style.inset='0';
+renderer.domElement.style.zIndex='1';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.12, 8000);
+const HOME = new THREE.Vector3(0, isSmall?104:118, isSmall?222:252);
+camera.position.copy(HOME);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.055;
+controls.rotateSpeed = 0.55;
+controls.panSpeed = 0.6;
+controls.zoomSpeed = 0.9;
+controls.minDistance = 1.2;
+controls.maxDistance = 1100;
+controls.enablePan = true;
+controls.touches = {ONE:THREE.TOUCH.ROTATE, TWO:THREE.TOUCH.DOLLY_PAN};
+
+/* ================= lights ================= */
+const sunLight = new THREE.PointLight(0xfff2dc, 3.1, 0, 0); // decay 0 → planet luar tetap terlihat
+scene.add(sunLight);
+scene.add(new THREE.AmbientLight(0x6f7fb0, 0.26));
+const rim = new THREE.DirectionalLight(0x8ea8ff, 0.14); rim.position.set(-1,0.6,-1); scene.add(rim);
+
+/* ================= texture loading ================= */
+const manager = new THREE.LoadingManager();
+const texLoader = new THREE.TextureLoader(manager);
+let loadTotal = 0, loadDone = 0;
+const bar = el('bar');
+function tick(){ bar.style.width = Math.min(100, Math.round(loadDone/Math.max(1,loadTotal)*100)) + '%'; }
+
+function loadMap(url, mat, slot, srgb=true){
+  if(!url) return;
+  loadTotal++; tick();
+  texLoader.load(url, tex=>{
+    if(srgb) tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    mat[slot] = tex; mat.needsUpdate = true;
+    loadDone++; tick();
+  }, undefined, ()=>{ loadDone++; tick(); });
+}
+
+/* fallback: tekstur prosedural (dipakai sebelum / bila gambar gagal dimuat) */
+function proceduralTex(hex, banded){
+  const c = document.createElement('canvas'); c.width=256; c.height=128;
+  const x = c.getContext('2d');
+  const base = new THREE.Color(hex);
+  x.fillStyle = '#'+base.getHexString(); x.fillRect(0,0,256,128);
+  for(let i=0;i<(banded?26:260);i++){
+    const l = 0.5 + (Math.random()-0.5)*0.5;
+    const col = base.clone().offsetHSL(0,0,(l-0.5)*0.5);
+    x.fillStyle = 'rgba('+[col.r*255|0,col.g*255|0,col.b*255|0].join(',')+',0.5)';
+    if(banded){ const y=Math.random()*128; x.fillRect(0,y,256,2+Math.random()*7); }
+    else { const r=2+Math.random()*10; x.beginPath(); x.arc(Math.random()*256,Math.random()*128,r,0,7); x.fill(); }
+  }
+  const tx = new THREE.CanvasTexture(c);
+  tx.colorSpace = THREE.SRGBColorSpace;
+  return tx;
+}
+
+/* ================= starfield ================= */
+(function stars(){
+  const N = isSmall ? 4200 : 8200;
+  const pos = new Float32Array(N*3), col = new Float32Array(N*3), siz = new Float32Array(N);
+  const c = new THREE.Color();
+  for(let i=0;i<N;i++){
+    const r = 1000 + Math.random()*700;
+    const th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.cos(ph)*0.65; pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+    const h = 0.58 + (Math.random()-0.5)*0.14;
+    c.setHSL(h, Math.random()*0.28, 0.5 + Math.random()*0.42);
+    col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+    siz[i] = Math.random()<0.04 ? 9+Math.random()*8 : 2.2+Math.random()*3.0;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color', new THREE.BufferAttribute(col,3));
+  g.setAttribute('size', new THREE.BufferAttribute(siz,1));
+  const spr = (()=>{ const cv=document.createElement('canvas'); cv.width=cv.height=64;
+    const x=cv.getContext('2d'); const gr=x.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.25,'rgba(255,255,255,.75)');
+    gr.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=gr; x.fillRect(0,0,64,64);
+    return new THREE.CanvasTexture(cv); })();
+  const m = new THREE.ShaderMaterial({
+    uniforms:{map:{value:spr}},
+    vertexShader:`attribute float size; varying vec3 vc;
+      void main(){ vc=color; vec4 mv=modelViewMatrix*vec4(position,1.);
+      gl_PointSize=max(0.8, size*(620.0/-mv.z)); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform sampler2D map; varying vec3 vc;
+      void main(){ vec4 tc=texture2D(map,gl_PointCoord); gl_FragColor=vec4(vc,1.0)*tc; }`,
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, vertexColors:true
+  });
+  scene.add(new THREE.Points(g,m));
+})();
+
+/* ================= sun ================= */
+const sunData = BODIES[0];
+const sunMat = new THREE.MeshBasicMaterial({map:proceduralTex('#ffb347',false), toneMapped:false});
+const sun = new THREE.Mesh(new THREE.SphereGeometry(S.sunR, 64, 48), sunMat);
+sun.userData.key = 'sun';
+scene.add(sun);
+loadMap(sunData.map, sunMat, 'map');
+
+function glowSprite(size, color, opacity){
+  const cv = document.createElement('canvas'); cv.width=cv.height=256;
+  const x = cv.getContext('2d');
+  const g = x.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0,'rgba(255,240,205,.95)');
+  g.addColorStop(.22,'rgba(255,196,110,.42)');
+  g.addColorStop(.5,'rgba(255,140,45,.13)');
+  g.addColorStop(1,'rgba(255,110,15,0)');
+  x.fillStyle=g; x.fillRect(0,0,256,256);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(cv), color, transparent:true, opacity,
+    blending:THREE.AdditiveBlending, depthWrite:false, depthTest:true, toneMapped:false}));
+  s.scale.setScalar(size);
+  return s;
+}
+const GA = S.sunR*3.4, GB = S.sunR*9.0;
+const glowA = glowSprite(GA, 0xffd79a, 0.95); sun.add(glowA);
+const glowB = glowSprite(GB, 0xff9b3d, 0.26); sun.add(glowB);
+
+/* ================= planets ================= */
+const bodies = [];      // {data, holder, tilt, mesh, hit, orbitLine, labelEl, moons[]}
+const hitTargets = [];
+const orbitLines = [];
+const moonGroups = [];
+
+function makeOrbitLine(a, e, incDeg, nodeDeg, color){
+  const b = a*Math.sqrt(1-e*e), c0 = a*e, pts = [];
+  for(let i=0;i<=360;i++){
+    const th = i*D2R;
+    pts.push(new THREE.Vector3(a*Math.cos(th)-c0, 0, b*Math.sin(th)));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = new THREE.LineBasicMaterial({color, transparent:true, opacity:0.30});
+  const line = new THREE.LineLoop(g, m);
+  return line;
+}
+
+/* posisi Kepler: menghasilkan gerak yang benar-benar melambat di aphelion */
+const tmpV = new THREE.Vector3();
+function keplerPos(a, e, M, out){
+  let E = M;
+  for(let i=0;i<4;i++) E = E - (E - e*Math.sin(E) - M)/(1 - e*Math.cos(E));
+  const b = a*Math.sqrt(1-e*e);
+  out.set(a*(Math.cos(E)-e), 0, b*Math.sin(E));
+  return out;
+}
+
+function buildRing(cfg, planetR){
+  const inner = planetR*cfg.inner, outer = planetR*cfg.outer;
+  const g = new THREE.RingGeometry(inner, outer, 160, 1);
+  const p = g.attributes.position, uv = g.attributes.uv, v = new THREE.Vector3();
+  const mid = (inner+outer)/2;
+  for(let i=0;i<p.count;i++){
+    v.fromBufferAttribute(p,i);
+    uv.setXY(i, v.length() < mid ? 0 : 1, 1);
+  }
+  const mat = new THREE.MeshBasicMaterial({
+    color:0xffffff, side:THREE.DoubleSide, transparent:true,
+    opacity: cfg.faint?0.55:0.95, depthWrite:false
+  });
+  loadMap(cfg.map, mat, 'map');
+  loadMap(cfg.alpha, mat, 'alphaMap', false);
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.rotation.x = -Math.PI/2;
+  return mesh;
+}
+
+function atmosphere(r, hex, power){
+  return new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.ShaderMaterial({
+    uniforms:{glowColor:{value:new THREE.Color(hex)}, p:{value:power}},
+    vertexShader:`varying vec3 vN; varying vec3 vP;
+      void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.);
+      vP=mv.xyz; gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform vec3 glowColor; uniform float p; varying vec3 vN; varying vec3 vP;
+      void main(){ float i=pow(clamp(1.0-dot(vN,normalize(-vP)),0.0,1.0),p);
+      gl_FragColor=vec4(glowColor, i*0.42); }`,
+    side:THREE.BackSide, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false
+  }));
+}
+
+/* halo lembut agar planet kecil tetap terlihat dari jauh */
+const haloTex = (()=>{
+  const cv=document.createElement('canvas'); cv.width=cv.height=128;
+  const x=cv.getContext('2d'); const g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(.28,'rgba(255,255,255,.42)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(cv);
+})();
+function halo(color){
+  return new THREE.Sprite(new THREE.SpriteMaterial({map:haloTex, color:new THREE.Color(color),
+    transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false, depthTest:false, toneMapped:false}));
+}
+
+const labelLayer = el('labels');
+function makeLabel(text, cls){
+  const d = document.createElement('div');
+  d.className = 'lab'+(cls?' '+cls:'');
+  d.textContent = text;
+  labelLayer.appendChild(d);
+  return d;
+}
+
+for(const d of BODIES){
+  if(d.type === 'star'){
+    const L = makeLabel(d.name[lang]);
+    bodies.push({data:d, obj:sun, mesh:sun, labelEl:L, dispR:S.sunR, moons:[]});
+    // hit target matahari
+    const hit = new THREE.Mesh(new THREE.SphereGeometry(S.sunR*1.15, 16, 12),
+      new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false, colorWrite:false}));
+    hit.userData.key = 'sun'; sun.add(hit); hitTargets.push(hit);
+    continue;
+  }
+
+  const r = rDisp(d.radiusKm);
+  const a = dDisp(d.dist);
+  d._r = r; d._a = a;
+  const node = Math.random()*360;
+
+  const orbitGroup = new THREE.Object3D();
+  orbitGroup.rotation.y = node*D2R;
+  orbitGroup.rotation.x = d.inc*D2R;
+  scene.add(orbitGroup);
+
+  const line = makeOrbitLine(a, d.ecc, d.inc, node, new THREE.Color(d.color).lerp(new THREE.Color(0xffffff),0.25));
+  orbitGroup.add(line); orbitLines.push(line);
+
+  const holder = new THREE.Object3D();
+  orbitGroup.add(holder);
+
+  const tilt = new THREE.Object3D();
+  tilt.rotation.z = d.tilt*D2R;
+  holder.add(tilt);
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: proceduralTex(d.color, d.radiusKm>20000),
+    roughness: d.radiusKm>20000 ? 0.95 : 0.86,
+    metalness: 0.02
+  });
+  loadMap(d.map, mat, 'map');
+  if(d.bump){ loadMap(d.bump, mat, 'bumpMap', false); mat.bumpScale = 0.035; }
+  if(d.spec){ loadMap(d.spec, mat, 'roughnessMap', false); }
+
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 48), mat);
+  mesh.userData.key = d.key;
+  tilt.add(mesh);
+
+  // awan Bumi
+  let clouds = null;
+  if(d.clouds){
+    const cm = new THREE.MeshStandardMaterial({
+      transparent:true, opacity:0.62, depthWrite:false,
+      blending:THREE.AdditiveBlending, roughness:1, metalness:0, color:0xffffff
+    });
+    loadMap(d.clouds, cm, 'map');
+    clouds = new THREE.Mesh(new THREE.SphereGeometry(r*1.014, 48, 32), cm);
+    tilt.add(clouds);
+  }
+  if(d.atmo) tilt.add(atmosphere(r*(d.key==='earth'?1.055:1.03), d.atmo, d.key==='earth'?2.8:3.2));
+
+  if(d.ring) tilt.add(buildRing(d.ring, r));
+
+  // hit target besar agar mudah diketuk di layar sentuh
+  const hitR = Math.max(r*2.0, 1.6);
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(hitR, 14, 10),
+    new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false, colorWrite:false}));
+  hit.userData.key = d.key;
+  holder.add(hit); hitTargets.push(hit);
+
+  // bulan
+  const moons = [];
+  if(d.moons){
+    for(const m of d.moons){
+      const mg = new THREE.Object3D();
+      mg.rotation.x = (Math.random()-0.5)*0.08;
+      tilt.add(mg); moonGroups.push(mg);
+      const mm = new THREE.MeshStandardMaterial({map:proceduralTex(m.color,false), roughness:0.95, metalness:0});
+      if(m.map) loadMap(m.map, mm, 'map');
+      const ms = new THREE.Mesh(new THREE.SphereGeometry(m.r, 28, 20), mm);
+      ms.position.x = m.d;
+      mg.add(ms);
+      const mo = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(
+          Array.from({length:97},(_,i)=>new THREE.Vector3(Math.cos(i/96*Math.PI*2)*m.d,0,Math.sin(i/96*Math.PI*2)*m.d))),
+        new THREE.LineBasicMaterial({color:0x9fb4dd, transparent:true, opacity:0.10}));
+      mg.add(mo);
+      const ml = makeLabel(m.name[lang], 'moon');
+      moons.push({cfg:m, group:mg, mesh:ms, labelEl:ml, orbit:mo});
+      const mh = new THREE.Mesh(new THREE.SphereGeometry(Math.max(m.r*2.6,0.9),10,8),
+        new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false}));
+      mh.userData.key = d.key; ms.add(mh); hitTargets.push(mh);
+    }
+  }
+
+  const hl = halo(d.color); holder.add(hl);
+
+  const L = makeLabel(d.name[lang]);
+  bodies.push({data:d, orbitGroup, holder, tilt, mesh, clouds, labelEl:L, dispR:r, moons, node, halo:hl});
+}
+
+/* ================= asteroid belt ================= */
+const beltBands = [];
+(function belt(){
+  const N = isSmall ? 1100 : 2200, BANDS = 6;
+  const rIn = dDisp(2.15), rOut = dDisp(3.35);
+  const geo = new THREE.IcosahedronGeometry(1, 1);
+  const per = Math.ceil(N/BANDS);
+  for(let b=0;b<BANDS;b++){
+    const g = new THREE.Object3D(); scene.add(g);
+    const mat = new THREE.MeshStandardMaterial({color:0x9a8f80, roughness:1, metalness:0.05, flatShading:true});
+    const inst = new THREE.InstancedMesh(geo, mat, per);
+    const dummy = new THREE.Object3D();
+    const f0 = b/BANDS, f1 = (b+1)/BANDS;
+    for(let i=0;i<per;i++){
+      const rad = rIn + (rOut-rIn)*(f0 + Math.random()*(f1-f0));
+      const th = Math.random()*Math.PI*2;
+      dummy.position.set(Math.cos(th)*rad, (Math.random()-0.5)*2.0, Math.sin(th)*rad);
+      const s = 0.05 + Math.pow(Math.random(),3)*0.20;
+      dummy.scale.set(s, s*(0.6+Math.random()*0.7), s*(0.7+Math.random()*0.6));
+      dummy.rotation.set(Math.random()*6, Math.random()*6, Math.random()*6);
+      dummy.updateMatrix();
+      inst.setMatrixAt(i, dummy.matrix);
+    }
+    inst.instanceMatrix.needsUpdate = true;
+    g.add(inst);
+    const aMid = 2.15 + (3.35-2.15)*((f0+f1)/2);
+    beltBands.push({g, rate: 1/Math.pow(aMid,1.5)});   // hukum III Kepler
+  }
+})();
+
+/* ================= UI: i18n ================= */
+function fmt(n, dec=0){
+  return n.toLocaleString(lang==='id'?'id-ID':'en-US',{minimumFractionDigits:dec, maximumFractionDigits:dec});
+}
+function applyLang(){
+  document.documentElement.lang = lang;
+  el('langID').classList.toggle('on', lang==='id');
+  el('langEN').classList.toggle('on', lang==='en');
+  document.querySelectorAll('[data-t]').forEach(n => n.textContent = t(n.dataset.t));
+  el('loadTxt').textContent = t('loading');
+  el('hint').textContent = isTouch ? t('hint') : t('hintDesk');
+  bodies.forEach(b=>{
+    b.labelEl.textContent = b.data.name[lang];
+    b.moons.forEach(m => m.labelEl.textContent = m.cfg.name[lang]);
+  });
+  buildNav(); buildHelp(); updateSpeedLabel();
+  if(focusKey) openPanel(focusKey, false);
+}
+
+/* ================= UI: nav chips ================= */
+function buildNav(){
+  const nav = el('nav'); nav.innerHTML = '';
+  const list = [BODIES[0], ...BODIES.slice(1,5), BELT, ...BODIES.slice(5)];
+  for(const d of list){
+    const b = document.createElement('button');
+    b.className = 'chip' + (focusKey===d.key?' on':'');
+    b.dataset.k = d.key;
+    b.innerHTML = `<span class="dot" style="background:${d.color}"></span>${d.name[lang]}`;
+    b.onclick = ()=>{ openPanel(d.key, true); };
+    nav.appendChild(b);
+  }
+}
+function syncNav(){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', c.dataset.k===focusKey));
+}
+
+/* ================= UI: help ================= */
+function buildHelp(){
+  el('helpCard').innerHTML = `
+    <h3>${t('helpTitle')}</h3><div class="sub">${t('helpSub')}</div>
+    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],['📏','h5t','h5d']]
+      .map(([i,a,b])=>`<div class="hrow"><i>${i}</i><div><b>${t(a)}</b><span>${t(b)}</span></div></div>`).join('')}
+    <button id="helpClose">${t('close')}</button>`;
+  el('helpClose').onclick = ()=> el('help').classList.remove('open');
+}
+
+/* ================= UI: info panel ================= */
+function statCard(v, l){ return `<div class="stat"><b>${v}</b><span>${l}</span></div>`; }
+
+function dayText(h){
+  const ah = Math.abs(h);
+  const retro = h<0 ? ` (${t('retro')})` : '';
+  return ah>=48 ? `${fmt(ah/24,1)} ${t('days')}${retro}` : `${fmt(ah,1)} ${t('hours')}${retro}`;
+}
+function yearText(d){
+  return d>=800 ? `${fmt(d/365.25, d/365.25>=100?0:1)} ${t('years')}` : `${fmt(d,1)} ${t('days')}`;
+}
+
+function openPanel(key, fly){
+  const d = key==='belt' ? BELT : BODIES.find(b=>b.key===key);
+  if(!d) return;
+  focusKey = key; syncNav();
+  el('ptype').textContent = t(d.type==='star'?'star':d.type==='dwarf'?'dwarf':d.type==='region'?'region':'planet');
+  el('pname').textContent = d.name[lang];
+  el('palt').textContent = d.alt[lang];
+
+  let stats = '';
+  if(d.type !== 'region'){
+    stats += statCard(fmt(d.radiusKm*2)+' km', t('diameter'));
+    if(d.dist) stats += statCard(fmt(d.dist*149.6,1)+' '+(lang==='id'?'juta km':'million km'), t('distance'));
+    if(d.orbitDays) stats += statCard(yearText(d.orbitDays), t('year'));
+    stats += statCard(dayText(d.rotHours), t('day'));
+    stats += statCard(d.moonsN>0?fmt(d.moonsN):t('none'), t('moons'));
+    stats += statCard(fmt(d.gravity,2)+' m/s²', t('gravity'));
+    stats += statCard((d.tempC>0&&d.type==='star'?'~':'')+fmt(d.tempC)+' °C', t('temp'));
+    if(d.orbKms) stats += statCard(fmt(d.orbKms,1)+' km/s', t('speedOrb'));
+  }
+
+  let cmp = '';
+  if(d.type!=='region' && d.type!=='star'){
+    const sz = d.radiusKm/6371, dy = Math.abs(d.rotHours)/23.934;
+    const bw = v => Math.max(2, Math.min(100, (Math.log10(v)+1.6)/3.2*100));
+    cmp = `<div class="sechead">${t('cmpSize')}</div>
+      <div class="cmp"><div class="cmpbar"><i style="width:${bw(sz)}%"></i></div>
+      <div class="cmplab"><span>${t('earthUnit')}</span><span>${fmt(sz,2)}×</span></div></div>
+      <div class="sechead">${t('cmpDay')}</div>
+      <div class="cmp"><div class="cmpbar"><i style="width:${bw(dy)}%"></i></div>
+      <div class="cmplab"><span>${t('earthUnit')}</span><span>${fmt(dy,2)}×</span></div></div>`;
+  }
+
+  let moonsHtml = '';
+  if(d.moons && d.moons.length){
+    moonsHtml = `<div class="sechead">${t('moonsHead')}</div><div class="stats">` +
+      d.moons.map(m=>`<div class="stat"><b>${m.name[lang]}</b><span>${lang==='id'?'periode':'period'} ${fmt(Math.abs(m.p),2)} ${t('days')}</span></div>`).join('') +
+      `</div>`;
+  }
+
+  el('pbody').innerHTML = `
+    <p>${d.desc[lang]}</p>
+    ${stats?`<div class="sechead">${t('statsHead')}</div><div class="stats">${stats}</div>`:''}
+    ${cmp}
+    ${moonsHtml}
+    <div class="sechead">${t('factsHead')}</div>
+    ${d.facts.map(f=>`<div class="fact"><i>${f.ic}</i><div>${f[lang]}</div></div>`).join('')}
+    <button id="deepBtn">${t('more')}</button>
+    <div id="deep">${d.deep[lang].split('\n\n').map(p=>`<p>${p}</p>`).join('')}</div>
+    ${d.key!=='belt'?`<button id="gotoBtn">${t('goto')}</button>`:''}
+    <div class="sechead" style="margin-bottom:6px">${lang==='id'?'Catatan':'Note'}</div>
+    <p style="font-size:12px;color:#8b97b8;line-height:1.5">${t('scaleNote')}${d.moonsN>2?' '+t('moonNote'):''}</p>`;
+
+  el('deepBtn').onclick = e=>{
+    const dv = el('deep'); const on = dv.classList.toggle('show');
+    e.target.textContent = on ? t('less') : t('more');
+    if(on) setTimeout(()=>dv.scrollIntoView({behavior:'smooth', block:'start'}), 60);
+  };
+  const gb = el('gotoBtn'); if(gb) gb.onclick = ()=> flyTo(key);
+  el('pbody').scrollTop = 0;
+  el('panel').classList.add('open');
+  if(fly) flyTo(key);
+}
+function closePanel(){
+  const key = focusKey, wasFollowing = !!followObj;
+  el('panel').classList.remove('open');
+  focusKey = null; syncNav();
+  if(wasFollowing && key && key !== 'belt') flyTo(key, 0.7);  // rapikan bingkai kembali ke tengah
+  else followObj = null;
+}
+
+/* ================= camera flight ================= */
+let flight = null, followLift = 0, followSide = 0;
+const followDir = new THREE.Vector3(0,1,0);
+const UP_Y = new THREE.Vector3(0,1,0);
+const vSide = new THREE.Vector3();
+const easeIO = x => x<0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2;
+
+function bodyWorldPos(key, out){
+  if(key==='sun') return out.set(0,0,0);
+  const b = bodies.find(x=>x.data.key===key);
+  if(!b) return out.set(0,0,0);
+  return b.holder.getWorldPosition(out);
+}
+function flyTo(key, dur){
+  dur = dur || 1.35;
+  const panelIsOpen = el('panel').classList.contains('open');
+  if(key==='belt'){
+    const bd = isSmall ? 168 : 132;
+    const bdir = new THREE.Vector3(0, 0.54, 0.84).normalize();
+    const blift = ((isSmall && panelIsOpen) ? innerHeight*0.31 : 58) * bd / PX_PER_UNIT();
+    const blook = new THREE.Vector3(0, -blift, 0);
+    flight = {from:camera.position.clone(), to:blook.clone().add(bdir.multiplyScalar(bd)),
+      fromT:controls.target.clone(), toT:blook, t:0, dur};
+    followObj = null; return;
+  }
+  const b = key==='sun' ? {holder:sun, dispR:S.sunR} : bodies.find(x=>x.data.key===key);
+  if(!b) return;
+  const target = new THREE.Vector3(); (b.holder||sun).getWorldPosition(target);
+
+  // jarak dihitung agar objek (beserta cincin & bulannya) pas di area layar yang terlihat
+  const d = b.data;
+  let needR = b.dispR * 1.5;
+  if(d && d.ring) needR = Math.max(needR, b.dispR*d.ring.outer*1.2);
+  if(b.moons && b.moons.length) needR = Math.max(needR, b.moons[b.moons.length-1].cfg.d*0.95);
+  const availFrac = (isSmall && panelIsOpen) ? 0.155 : 0.36;   // setengah-tinggi area pandang
+  const dist = Math.max(needR * PX_PER_UNIT() / (innerHeight*availFrac), 3.0);
+
+  // tempatkan kamera di sisi yang disinari Matahari (3/4 view), bukan di sisi malam
+  const UPV = new THREE.Vector3(0,1,0);
+  let dir;
+  if(key === 'sun'){
+    dir = camera.position.clone().sub(target);
+    if(dir.lengthSq()<1e-4) dir.set(0.5,0.4,1);
+    dir.normalize(); dir.y = Math.max(dir.y, 0.28); dir.normalize();
+  } else {
+    const toSun = target.clone().negate().normalize();          // planet → Matahari
+    const side  = new THREE.Vector3().crossVectors(UPV, toSun).normalize();
+    // elevasi cukup tinggi supaya kamera tidak menembus sabuk asteroid dalam perjalanan
+    dir = toSun.multiplyScalar(0.55).add(side.multiplyScalar(0.52)).add(UPV.clone().multiplyScalar(0.66)).normalize();
+  }
+
+  // panel info menutupi sebagian layar → geser titik pandang agar objek tetap di area yang terlihat
+  const panelOpen = panelIsOpen;
+  // naikkan objek agar tidak tertutup panel (mobile) atau bilah kontrol bawah (desktop)
+  const liftPx = (isSmall && panelOpen) ? innerHeight*0.31 : 58;
+  const lift = liftPx * dist / PX_PER_UNIT();
+  const look = target.clone(); look.y -= lift;
+  let sideShift = 0;
+  if(panelOpen && !isSmall){
+    const pw = el('panel').getBoundingClientRect().width || 392;
+    sideShift = (pw/2) * dist / PX_PER_UNIT();
+    look.add(new THREE.Vector3().crossVectors(UPV, dir).normalize().multiplyScalar(sideShift));
+  }
+
+  flight = {from:camera.position.clone(), to:look.clone().add(dir.multiplyScalar(dist)),
+    fromT:controls.target.clone(), toT:look, t:0, dur, key, lift, sideShift, dir:dir.clone()};
+  el('hint').classList.add('hide');
+}
+function goHome(){
+  flight = {from:camera.position.clone(), to:HOME.clone(),
+    fromT:controls.target.clone(), toT:new THREE.Vector3(0,0,0), t:0, dur:1.3};
+  followObj = null; closePanel(); el('tgTop').classList.remove('on'); topView=false;
+}
+let topView = false;
+function goTop(){
+  topView = !topView;
+  el('tgTop').classList.toggle('on', topView);
+  flight = {from:camera.position.clone(), to: topView? new THREE.Vector3(0,330,0.6) : HOME.clone(),
+    fromT:controls.target.clone(), toT:new THREE.Vector3(0,0,0), t:0, dur:1.3};
+  followObj = null;
+}
+
+/* ================= interaction ================= */
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let downX=0, downY=0, downT=0, moved=false;
+
+renderer.domElement.addEventListener('pointerdown', e=>{
+  downX=e.clientX; downY=e.clientY; downT=performance.now(); moved=false;
+  el('hint').classList.add('hide');
+});
+renderer.domElement.addEventListener('pointermove', e=>{
+  if(Math.hypot(e.clientX-downX, e.clientY-downY) > 9) moved = true;
+  if(!isTouch) hover(e);
+});
+renderer.domElement.addEventListener('pointerup', e=>{
+  if(moved || performance.now()-downT > 600) return;
+  const k = pick(e.clientX, e.clientY);
+  if(k) openPanel(k, true); else if(el('panel').classList.contains('open')) closePanel();
+});
+
+function pick(cx, cy){
+  ndc.x = (cx/innerWidth)*2-1; ndc.y = -(cy/innerHeight)*2+1;
+  ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(hitTargets, false);
+  return hits.length ? hits[0].object.userData.key : null;
+}
+const tip = el('tip');
+function hover(e){
+  const k = pick(e.clientX, e.clientY);
+  renderer.domElement.style.cursor = k ? 'pointer' : 'grab';
+  if(k){
+    const d = BODIES.find(b=>b.key===k);
+    tip.textContent = d ? d.name[lang] : '';
+    tip.style.left = e.clientX+'px'; tip.style.top = e.clientY+'px';
+    tip.classList.add('on');
+  } else tip.classList.remove('on');
+}
+
+/* ================= HUD ================= */
+const spd = el('spd');
+function speedFromSlider(v){
+  if(v<=0) return 0;
+  return Math.pow(10, (v/100)*(Math.log10(600)+2)-2);   // 0.01 … 600 hari/detik
+}
+function updateSpeedLabel(){
+  spd.style.setProperty('--p', spd.value+'%');
+  el('spdVal').textContent = paused ? t('paused')
+    : (daysPerSec<1 ? fmt(daysPerSec,2) : daysPerSec<10 ? fmt(daysPerSec,1) : fmt(daysPerSec,0)) + ' ' + t('perSec');
+}
+spd.oninput = ()=>{ daysPerSec = speedFromSlider(+spd.value); if(daysPerSec>0 && paused) setPause(false); updateSpeedLabel(); };
+daysPerSec = speedFromSlider(+spd.value);
+
+function setPause(p){
+  paused = p;
+  el('playIco').innerHTML = p ? '<path d="M7 4.5v15l13-7.5z"/>' : '<path d="M8 5h3v14H8zM13 5h3v14h-3z"/>';
+  updateSpeedLabel();
+}
+el('playBtn').onclick = ()=> setPause(!paused);
+setPause(false);
+
+el('tgOrbit').onclick = e=>{ const on=e.target.classList.toggle('on'); orbitLines.forEach(l=>l.visible=on); };
+let labelsOn = true;
+el('tgLabel').onclick = e=>{ labelsOn = e.target.classList.toggle('on'); if(!labelsOn) labelLayer.querySelectorAll('.lab').forEach(l=>l.style.opacity=0); };
+el('tgBelt').onclick = e=>{ const on=e.target.classList.toggle('on'); beltBands.forEach(b=>b.g.visible=on); };
+let moonsOn = true;
+el('tgMoon').onclick = e=>{ moonsOn = e.target.classList.toggle('on'); moonGroups.forEach(g=>g.visible=moonsOn); };
+el('tgTop').onclick = goTop;
+el('homeBtn').onclick = goHome;
+el('helpBtn').onclick = ()=> el('help').classList.add('open');
+el('help').onclick = e=>{ if(e.target.id==='help') el('help').classList.remove('open'); };
+el('pclose').onclick = closePanel;
+el('langID').onclick = ()=>{ lang='id'; applyLang(); };
+el('langEN').onclick = ()=>{ lang='en'; applyLang(); };
+addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); setPause(!paused); }
+  if(e.key==='Escape') closePanel();
+});
+
+/* ================= loop ================= */
+const clock = new THREE.Clock();
+const vpos = new THREE.Vector3(), vscr = new THREE.Vector3(), vprev = new THREE.Vector3();
+const vplanet = new THREE.Vector3(), vA = new THREE.Vector3(), vB = new THREE.Vector3();
+
+/* apakah titik `p` tersembunyi di balik bola berpusat `c` berjari-jari `r`? */
+function occluded(p, c, r){
+  vA.copy(p).sub(camera.position);
+  vB.copy(c).sub(camera.position);
+  const dp = vA.length(), dc = vB.length();
+  if(dp <= dc) return false;                    // objek lebih dekat daripada planet
+  const proj = vB.dot(vA)/(dp*dp);
+  if(proj <= 0) return false;
+  vA.multiplyScalar(proj).sub(vB);              // jarak tegak lurus pusat planet ke garis pandang
+  return vA.length() < r;
+}
+const MAX_SPIN = 1.6;   // rad/detik — mencegah efek strobo saat waktu dipercepat
+
+const PX_PER_UNIT = () => (0.5*innerHeight)/Math.tan(camera.fov*0.5*D2R);
+function positionLabel(elm, world, minPx, prio, radius3D){
+  vscr.copy(world).project(camera);
+  if(vscr.z > 1){ elm.style.opacity = 0; return; }
+  const dist = camera.position.distanceTo(world);
+  const x = (vscr.x*0.5+0.5)*innerWidth, y = (-vscr.y*0.5+0.5)*innerHeight;
+  // geser label ke bawah objek agar bolanya sendiri tidak tertutup
+  const rpx = radius3D ? radius3D*PX_PER_UNIT()/Math.max(dist,0.01) : 0;
+  const off = Math.min(Math.max(15, rpx + 13), 110);
+  const op = prio ? 1 : Math.max(0, Math.min(1, (minPx - dist)/minPx*2.2));
+  elm.style.transform = `translate(-50%,-50%) translate(${x.toFixed(1)}px,${(y+off).toFixed(1)}px)`;
+  elm.style.opacity = op;
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.06);
+  const dDays = paused ? 0 : dt*daysPerSec;
+  simDays += dDays;
+
+  // matahari
+  sun.rotation.y += Math.min(2*Math.PI/(609.12/24)*daysPerSec, MAX_SPIN)*dt*(paused?0:1);
+  const pulse = 1 + Math.sin(clock.elapsedTime*0.8)*0.02;
+  glowA.scale.setScalar(GA*pulse); glowB.scale.setScalar(GB*(2-pulse));
+
+  // planet
+  for(const b of bodies){
+    const d = b.data;
+    if(d.type==='star') continue;
+    const M = (simDays/d.orbitDays)*Math.PI*2 + (b.node||0);
+    keplerPos(d._a, d.ecc, M, tmpV);
+    b.holder.position.copy(tmpV);
+
+    if(!paused){
+      const w = 2*Math.PI/(Math.abs(d.rotHours)/24)*daysPerSec;
+      b.mesh.rotation.y += Math.sign(d.rotHours)*Math.min(w, MAX_SPIN)*dt;
+      if(b.clouds) b.clouds.rotation.y += Math.sign(d.rotHours)*Math.min(w*1.18, MAX_SPIN)*dt;
+      for(const m of b.moons){
+        const mw = 2*Math.PI/Math.abs(m.cfg.p)*daysPerSec;
+        m.group.rotation.y += Math.sign(m.cfg.p)*Math.min(mw, MAX_SPIN)*dt;
+        m.mesh.rotation.y += Math.sign(m.cfg.p)*Math.min(mw, MAX_SPIN)*dt;  // terkunci pasang surut
+      }
+    }
+  }
+
+  // sabuk asteroid (rotasi diferensial sesuai hukum Kepler)
+  if(!paused) for(const b of beltBands) b.g.rotation.y += b.rate*daysPerSec*dt*0.9;
+
+  // penerbangan kamera
+  if(flight){
+    flight.t += dt/flight.dur;
+    const k = easeIO(Math.min(1, flight.t));
+    // target bergerak? ikuti posisinya saat ini
+    if(flight.key){
+      bodyWorldPos(flight.key, flight.toT);
+      flight.toT.y -= (flight.lift||0);
+      if(flight.sideShift) flight.toT.add(vSide.crossVectors(UP_Y, flight.dir).normalize().multiplyScalar(flight.sideShift));
+    }
+    camera.position.lerpVectors(flight.from, flight.to, k);
+    controls.target.lerpVectors(flight.fromT, flight.toT, k);
+    if(flight.t>=1){
+      followObj = flight.key||null; followLift = flight.lift||0;
+      followSide = flight.sideShift||0; followDir.copy(flight.dir||UP_Y);
+      flight=null;
+    }
+  } else if(followObj){
+    bodyWorldPos(followObj, vpos); vpos.y -= followLift;
+    if(followSide) vpos.add(vSide.crossVectors(UP_Y, followDir).normalize().multiplyScalar(followSide));
+    vprev.copy(vpos).sub(controls.target);
+    camera.position.add(vprev);
+    controls.target.copy(vpos);
+  }
+
+  controls.update();
+
+  // sinkronkan matriks kamera SEBELUM memproyeksikan label,
+  // agar label tidak tertinggal satu frame dari gambar yang dirender
+  camera.updateMatrixWorld();
+  camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+
+  // halo planet: membesar bila jauh, memudar bila kamera mendekat
+  for(const b of bodies){
+    if(!b.halo) continue;
+    b.holder.getWorldPosition(vpos);
+    const cd = camera.position.distanceTo(vpos);
+    const s = Math.max(b.dispR*2.8, cd*0.017);
+    b.halo.scale.setScalar(s);
+    b.halo.material.opacity = Math.min(0.78, Math.max(0, (cd/(b.dispR*34)) - 0.18));
+  }
+
+  // label
+  if(labelsOn){
+    for(const b of bodies){
+      (b.holder||sun).getWorldPosition(vpos);
+      positionLabel(b.labelEl, vpos, 900, true, b.dispR);
+      const near = camera.position.distanceTo(vpos) < b.dispR*30;
+      vplanet.copy(vpos);
+      for(const m of b.moons){
+        if(!moonsOn || !near){ m.labelEl.style.opacity = 0; continue; }
+        m.mesh.getWorldPosition(vpos);
+        if(occluded(vpos, vplanet, b.dispR)){ m.labelEl.style.opacity = 0; continue; }
+        positionLabel(m.labelEl, vpos, 70, false, m.cfg.r);
+      }
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+/* ================= boot ================= */
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+window.__dbg = () => ({
+  cam: camera.position.toArray().map(v=>+v.toFixed(1)),
+  tgt: controls.target.toArray().map(v=>+v.toFixed(1)),
+  dist: +camera.position.distanceTo(controls.target).toFixed(2),
+  follow: followObj, flying: !!flight
+});
+
+applyLang();
+animate();
+
+let hidden = false;
+function hideLoader(){
+  if(hidden) return; hidden = true;
+  bar.style.width='100%';
+  setTimeout(()=>{ el('loader').classList.add('done'); }, 260);
+  setTimeout(()=>{ el('hint').classList.add('hide'); }, 9000);
+}
+manager.onLoad = hideLoader;
+setTimeout(hideLoader, 7000);   // jangan pernah menahan pengguna bila CDN lambat
+
+</script>
+
+<script>
+/* Jika pustaka 3D gagal dimuat (mis. tanpa koneksi internet), beri tahu pengguna
+   alih-alih membiarkan layar pemuatan berputar selamanya. */
+setTimeout(function(){
+  if(window.__dbg) return;
+  var l = document.getElementById('loader');
+  if(!l || l.classList.contains('done')) return;
+  var id = (document.documentElement.lang||'id') !== 'en';
+  document.getElementById('loadTxt').innerHTML = id
+    ? 'Gagal memuat pustaka 3D.<br>Periksa koneksi internet lalu muat ulang halaman.'
+    : 'Could not load the 3D library.<br>Check your internet connection and reload the page.';
+  document.getElementById('loadTxt').style.cssText =
+    'margin-top:26px;font-size:13px;line-height:1.6;text-align:center;letter-spacing:0;text-transform:none;color:#9aa6c7;max-width:280px';
+  document.getElementById('barWrap').style.display = 'none';
+}, 14000);
+</script>
+
+</body>
+</html>
