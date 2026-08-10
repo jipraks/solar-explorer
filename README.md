@@ -74,6 +74,7 @@ Some deliberate choices:
   and restores your setting on exit.
 - **You cannot fly through anything.** Getting inside a body pushes the ship back out
   and bounces it clear; the Sun warns you off before you get there.
+- **Hit a world hard enough and the ship blows up** — see below.
 - **The readouts are real.** Speed and distance are recovered by inverting the map's
   own distance compression, which is also why the ship reads as travelling hundreds of
   times the speed of light. Rather than hide that, the help sheet names it: a warp
@@ -82,6 +83,27 @@ Some deliberate choices:
 The ship computer speaks its callouts — engine start, full thrust, approaching a
 planet, arrival, and the Sun warning — through the same Web Speech API as the panel
 narration, in whichever language is selected, and can be muted from the cockpit.
+
+### Crashing
+
+Touching a planet gently just bumps and bounces, as before. Coming in above 5.5 units
+per second — roughly half thrust — destroys the ship: a 220-particle burst at the point
+of impact, a full-screen flash, a camera shake, a low boom, and a red canopy with
+**Kapal hancur / Ship destroyed** across it. The Sun is fatal at any speed, because it
+is the Sun.
+
+That difference is the whole lesson: ease off the thrust before you arrive. Losing the
+ship costs a child about two seconds and nothing else — a spare appears automatically,
+standing off the world it hit and already pointed at it, and the computer says so.
+
+Details that matter more than they sound:
+
+- **The controls go dead during those two seconds**, and a lever that was being held
+  when the ship blew up stays inert until it is released. Otherwise a finger resting on
+  full thrust would launch the spare ship straight back into the planet.
+- **Debris is left behind in space** rather than following the planet, and it keeps
+  flying — and clears itself — even if you leave the cockpit mid-explosion.
+- **The engine falls silent** while the ship is wreckage.
 
 ### Engine sound
 
