@@ -874,8 +874,8 @@ addEventListener('keydown', e=>{
   if(pilot){
     if(steerKey(e.code, true)){ e.preventDefault(); el('ckHint').classList.add('hide'); return; }
     if(e.code==='Space'){ e.preventDefault(); braking = true; return; }
-    if(e.key==='+' || e.key==='='){ setThrottle(throttle+0.08); return; }
-    if(e.key==='-' || e.key==='_'){ setThrottle(throttle-0.08); return; }
+    if(e.key==='+' || e.key==='='){ if(!wreckUntil) setThrottle(throttle+0.08); return; }
+    if(e.key==='-' || e.key==='_'){ if(!wreckUntil) setThrottle(throttle-0.08); return; }
     if(e.key==='Escape') exitPilot();
     return;
   }
@@ -1009,7 +1009,7 @@ function audioSet(action){
 function engineUpdate(){
   if(!actx || !eng) return;
   const now = actx.currentTime, T = 0.14;
-  const live = pilot && engineOn;
+  const live = pilot && engineOn && !wreckUntil;   // a wrecked ship is silent
   const th = live ? throttle : 0;
   eng.level.gain.setTargetAtTime(live ? 0.05 + 0.5*th : 0, now, T);
   eng.nFilt.frequency.setTargetAtTime(170 + 2100*th*th, now, T);
@@ -1050,6 +1050,25 @@ function sfx(kind){
     g.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
     o.connect(g); g.connect(eng.master);
     o.start(now); o.stop(now + 0.42);
+  } else if(kind === 'boom'){
+    const o = actx.createOscillator(); o.type = 'sine';
+    const og = actx.createGain();
+    o.frequency.setValueAtTime(150, now);
+    o.frequency.exponentialRampToValueAtTime(24, now + 0.7);
+    og.gain.setValueAtTime(0.8, now);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+    o.connect(og); og.connect(eng.master);
+    o.start(now); o.stop(now + 1);
+
+    const s = actx.createBufferSource(); s.buffer = noiseBuffer(actx);
+    const f = actx.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(3400, now);
+    f.frequency.exponentialRampToValueAtTime(200, now + 1.1);
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.85, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    s.connect(f); f.connect(g); g.connect(eng.master);
+    s.start(now); s.stop(now + 1.25);
   } else if(kind === 'alarm'){
     for(let i=0;i<2;i++){
       const at = now + i*0.26;
@@ -1129,6 +1148,148 @@ function setThrottle(v){
   if(throttle < 0.005 && was >= 0.005) sayOnce('idle', t('sayIdle'), 12000);
 }
 
+/* ---- crash & explosion =============================================
+   A gentle approach still just bumps and bounces; hitting a world hard
+   destroys the ship. That difference is the whole lesson — ease off the
+   thrust before you arrive — and losing the ship costs a child two seconds,
+   never their progress. The Sun is fatal at any speed, because it is the Sun. */
+const CRASH_SPEED = 5.5;         // display units/second of inward speed
+const BOOM_N = 220, BOOM_DUR = 1.5;
+let wreckUntil = 0, wreckBody = null, shakeUntil = 0, shakeAmp = 0;
+let boomLife = 0;
+const boomVel = new Float32Array(BOOM_N*3);
+const vBoom = new THREE.Vector3();
+const eTmp = new THREE.Euler();
+
+const boomPts = (()=>{
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BOOM_N*3), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(BOOM_N*3), 3));
+  const m = new THREE.PointsMaterial({size:0.5, map:haloTex, vertexColors:true, transparent:true,
+    opacity:1, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false});
+  const p = new THREE.Points(g, m);
+  p.frustumCulled = false; p.visible = false;
+  scene.add(p);
+  return p;
+})();
+
+function spawnBoom(at){
+  const pos = boomPts.geometry.attributes.position.array;
+  const col = boomPts.geometry.attributes.color.array;
+  for(let i=0;i<BOOM_N;i++){
+    const i3 = i*3;
+    pos[i3] = at.x; pos[i3+1] = at.y; pos[i3+2] = at.z;
+    // even scatter over a sphere, with a spread of speeds so it billows
+    const u = Math.random()*2-1, th = Math.random()*Math.PI*2, s = Math.sqrt(1-u*u);
+    const sp = 1.4 + Math.random()*Math.random()*9;
+    boomVel[i3] = s*Math.cos(th)*sp; boomVel[i3+1] = u*sp; boomVel[i3+2] = s*Math.sin(th)*sp;
+    const hot = Math.random();
+    col[i3] = 1; col[i3+1] = 0.32 + 0.62*hot; col[i3+2] = 0.06 + 0.3*hot*hot;
+  }
+  boomPts.geometry.attributes.position.needsUpdate = true;
+  boomPts.geometry.attributes.color.needsUpdate = true;
+  boomPts.visible = true;
+  boomLife = BOOM_DUR;
+}
+
+/* Runs from the main loop, so debris keeps flying even after the child leaves
+   the cockpit. Debris does not follow the planet — it is left behind in space. */
+function updateBoom(dt){
+  if(boomLife <= 0) return;
+  boomLife -= dt;
+  const pos = boomPts.geometry.attributes.position.array;
+  const drag = Math.exp(-1.1*dt);
+  for(let i=0;i<BOOM_N*3;i+=3){
+    pos[i]   += boomVel[i]*dt;
+    pos[i+1] += boomVel[i+1]*dt;
+    pos[i+2] += boomVel[i+2]*dt;
+    boomVel[i] *= drag; boomVel[i+1] *= drag; boomVel[i+2] *= drag;
+  }
+  boomPts.geometry.attributes.position.needsUpdate = true;
+  const k = Math.max(0, boomLife/BOOM_DUR);
+  boomPts.material.opacity = k*k;
+  boomPts.material.size = 0.35 + (1-k)*1.7;
+  if(boomLife <= 0) boomPts.visible = false;
+}
+
+function flashScreen(){
+  const f = el('ckFlash');
+  f.style.transition = 'none';
+  f.classList.add('on');
+  void f.offsetWidth;                       // commit the opaque frame before fading
+  f.style.transition = 'opacity .8s ease-out';
+  f.classList.remove('on');
+}
+
+function shake(ms, amp){
+  shakeUntil = performance.now() + ms;
+  shakeAmp = amp;
+}
+
+/* The camera carries the ship's orientation; the shake is layered on top of it
+   so it never leaks into the ship's actual heading. */
+function aimCamera(){
+  camera.quaternion.copy(shipQuat);
+  const left = shakeUntil - performance.now();
+  if(left > 0){
+    const k = left/700, a = shakeAmp*k*k;
+    eTmp.set((Math.random()*2-1)*a, (Math.random()*2-1)*a, (Math.random()*2-1)*a);
+    qTmp.setFromEuler(eTmp);
+    camera.quaternion.multiply(qTmp);
+  }
+}
+
+function explode(at, key){
+  spawnBoom(at);
+  flashScreen();
+  shake(700, 0.075);
+  sfx('boom');
+  wreckUntil = performance.now() + 2300;
+  wreckBody = key;
+  shipVel.multiplyScalar(0.12);
+  // let go of the controls: a finger still resting on the lever would otherwise
+  // slam the spare ship back to full thrust the instant it appears
+  thrBlocked = (thrId !== null);   // a hand already on the lever must let go first
+  thrId = null; stickId = null;
+  stickIn.x = stickIn.y = dragIn.x = dragIn.y = 0;
+  stickPad.classList.remove('grab');
+  stickKnob.style.transform = '';
+  el('cockpit').classList.add('wreck');
+  el('ckWreck').textContent = t('ckWreck');
+  el('ckWreck').classList.add('on');
+  el('ckData').classList.add('hide');
+  el('ckWarn').classList.remove('on'); warnUntil = 0;
+  sayComputer(t('sayBoom'), true);
+  setThrottle(0);       // after the callout, so its "engines idle" line is dropped
+}
+
+function respawnShip(){
+  const b = wreckBody ? bodies.find(x=>x.data.key === wreckBody) : null;
+  const target = vTmpA.set(0,0,0);
+  if(b) (b.holder || sun).getWorldPosition(target);
+  const r = b ? b.dispR : S.sunR;
+
+  // back off along the line we came in on, lifted a little above the plane
+  vTmpB.copy(camera.position).sub(target);
+  if(vTmpB.lengthSq() < 1e-6) vTmpB.set(0, 0.4, 1);
+  vTmpB.normalize(); vTmpB.y += 0.3; vTmpB.normalize();
+  camera.position.copy(target).addScaledVector(vTmpB, Math.max(r*9, 15));
+
+  mTmp.lookAt(camera.position, target, UP_Y);
+  shipQuat.setFromRotationMatrix(mTmp);
+  shipVel.set(0,0,0);
+  setThrottle(0);
+  realPos(camera.position, vRealPrev);
+  realSpeed = 0;
+  nearKey = arrivedKey = null;
+  el('ckData').classList.add('hide');
+  el('cockpit').classList.remove('wreck');
+  el('ckWreck').classList.remove('on');
+  wreckUntil = 0; wreckBody = null;
+  sayComputer(t('sayRespawn'), true);
+  engineUpdate();
+}
+
 function warn(text){
   el('ckWarn').textContent = text;
   el('ckWarn').classList.add('on');
@@ -1148,6 +1309,9 @@ function enterPilot(){
   stickIn.x = stickIn.y = dragIn.x = dragIn.y = keyIn.x = keyIn.y = 0;
   braking = false;
   nearKey = arrivedKey = null;
+  wreckUntil = 0; wreckBody = null; shakeUntil = 0;
+  el('cockpit').classList.remove('wreck');
+  el('ckWreck').classList.remove('on');
   realSpeed = 0;
   // take over facing whatever the user was already looking at
   mTmp.lookAt(camera.position, controls.target, UP_Y);
@@ -1182,6 +1346,10 @@ function exitPilot(openKey){
   if(!pilot) return;
   pilot = false;
   el('cockpit').classList.remove('open');
+  el('cockpit').classList.remove('wreck');
+  el('ckWreck').classList.remove('on');
+  wreckUntil = 0; wreckBody = null; shakeUntil = 0;
+  camera.quaternion.copy(shipQuat);              // drop any leftover shake
   el('pilotBtn').classList.remove('on');
   el('nav').style.display = '';
   el('hud').style.display = '';
@@ -1204,6 +1372,13 @@ function exitPilot(openKey){
 }
 
 function updateShip(dt){
+  if(wreckUntil){                       // the ship is gone; coast in the debris
+    if(performance.now() > wreckUntil){ respawnShip(); return; }
+    shipVel.multiplyScalar(Math.exp(-2.2*dt));
+    camera.position.addScaledVector(shipVel, dt);
+    aimCamera();
+    return;
+  }
   const ix = Math.max(-1, Math.min(1, keyIn.x + stickIn.x + dragIn.x));
   const iy = Math.max(-1, Math.min(1, keyIn.y + stickIn.y + dragIn.y));
 
@@ -1227,7 +1402,7 @@ function updateShip(dt){
   if(braking) shipVel.multiplyScalar(Math.exp(-3.4*dt));
 
   camera.position.addScaledVector(shipVel, dt);
-  camera.quaternion.copy(shipQuat);
+  aimCamera();
 
   /* nearest body — drives the readout, the callouts and the collision check */
   let best = null, bestSurf = Infinity;
@@ -1260,9 +1435,16 @@ function updateShip(dt){
       if(vTmpB.lengthSq() < 1e-6) vTmpB.set(0, 0, 1);
       vTmpB.normalize();
       camera.position.copy(vTmpA).addScaledVector(vTmpB, minR);
-      const into = shipVel.dot(vTmpB);
+      const into = shipVel.dot(vTmpB);                 // negative = flying inwards
+      vBoom.copy(vTmpA).addScaledVector(vTmpB, best.dispR);   // the point of impact
+
+      if(best.data.type === 'star' || -into > CRASH_SPEED){
+        explode(vBoom, best.data.key);
+        return;
+      }
       if(into < 0) shipVel.addScaledVector(vTmpB, -into*1.7);   // bounce back out
       warn(t('ckWarnHit'));
+      shake(300, 0.03);
       if(!sayLast.hitSfx || performance.now() - sayLast.hitSfx > 700){
         sayLast.hitSfx = performance.now(); sfx('thud');
       }
@@ -1336,7 +1518,8 @@ function endStick(e){
   stickKnob.style.transform = '';
 }
 stickPad.addEventListener('pointerdown', e=>{
-  stickId = e.pointerId; stickPad.setPointerCapture(e.pointerId);
+  stickId = e.pointerId;
+  try{ stickPad.setPointerCapture(e.pointerId); }catch(err){}
   stickPad.classList.add('grab'); moveStick(e); e.preventDefault();
 });
 stickPad.addEventListener('pointermove', e=>{ if(e.pointerId === stickId) moveStick(e); });
@@ -1344,21 +1527,26 @@ stickPad.addEventListener('pointerup', endStick);
 stickPad.addEventListener('pointercancel', endStick);
 
 const thrBar = el('thrBar');
-let thrId = null;
+let thrId = null, thrBlocked = false;
 function moveThr(e){
+  if(wreckUntil || thrBlocked) return;    // no controls while the ship is scrap
   const r = thrBar.getBoundingClientRect();
   setThrottle(1 - (e.clientY - r.top)/r.height);
 }
 thrBar.addEventListener('pointerdown', e=>{
-  thrId = e.pointerId; thrBar.setPointerCapture(e.pointerId); moveThr(e); e.preventDefault();
+  thrId = e.pointerId;
+  try{ thrBar.setPointerCapture(e.pointerId); }catch(err){}
+  thrBlocked = !!wreckUntil;              // grabbed mid-explosion: stays inert until released
+  moveThr(e); e.preventDefault();
 });
 thrBar.addEventListener('pointermove', e=>{ if(e.pointerId === thrId) moveThr(e); });
-thrBar.addEventListener('pointerup', e=>{ if(e.pointerId === thrId) thrId = null; });
-thrBar.addEventListener('pointercancel', ()=>{ thrId = null; });
+thrBar.addEventListener('pointerup', ()=>{ thrId = null; thrBlocked = false; });
+thrBar.addEventListener('pointercancel', ()=>{ thrId = null; thrBlocked = false; });
 
 renderer.domElement.addEventListener('wheel', e=>{
   if(!pilot) return;
   e.preventDefault();
+  if(wreckUntil) return;
   setThrottle(throttle - Math.sign(e.deltaY)*0.06);
 }, {passive:false});
 
@@ -1491,6 +1679,8 @@ function animate(){
   // asteroid belt (differential rotation, per Kepler's law)
   if(!paused) for(const b of beltBands) b.g.rotation.y += b.rate*daysPerSec*dt*0.9;
 
+  updateBoom(dt);      // debris keeps flying even after the child leaves the cockpit
+
   // camera: either the child is flying it, or it is on rails
   if(pilot){
     updateShip(dt);
@@ -1566,6 +1756,7 @@ window.__dbg = () => ({
   dist: +camera.position.distanceTo(controls.target).toFixed(2),
   follow: followObj, flying: !!flight,
   pilot, throttle: +throttle.toFixed(2), engineOn,
+  wrecked: !!wreckUntil, debris: boomLife > 0,
   audio: actx ? {state: actx.state,
     level: +eng.level.gain.value.toFixed(3), duck: +eng.duck.gain.value.toFixed(3),
     cutoff: Math.round(eng.nFilt.frequency.value)} : null,
