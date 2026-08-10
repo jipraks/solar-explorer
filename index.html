@@ -164,6 +164,105 @@
   .cmpbar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .cmplab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted)}
 
+  /* ---------- Pilot mode cockpit ---------- */
+  #cockpit{position:fixed;inset:0;z-index:29;display:none;pointer-events:none;
+    font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
+  #cockpit.open{display:block}
+  #cockpit>*{pointer-events:auto}
+  /* the canopy: a vignette plus a thin frame, enough to read as "inside a ship" */
+  #ckFrame{position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 150px 34px rgba(3,6,18,.72)}
+  #ckFrame::after{content:"";position:absolute;inset:9px;border-radius:20px;
+    border:1px solid rgba(124,196,255,.14)}
+  #ckCross{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none;
+    border:1px solid rgba(124,196,255,.34);border-radius:50%}
+  #ckCross::before,#ckCross::after{content:"";position:absolute;background:rgba(124,196,255,.5)}
+  #ckCross::before{left:50%;top:-10px;width:1px;height:9px;margin-left:-.5px}
+  #ckCross::after{left:50%;bottom:-10px;width:1px;height:9px;margin-left:-.5px}
+  #ckDot{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;
+    background:var(--accent2);box-shadow:0 0 7px 1px rgba(255,212,121,.7)}
+
+  .ckPanel{position:absolute;background:rgba(8,12,28,.6);border:1px solid rgba(124,196,255,.22);
+    border-radius:13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:9px 13px}
+  .ckLab{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+  .ckBig{font-size:19px;font-weight:660;color:var(--accent2);line-height:1.15}
+  .ckSub{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+  #ckSpeed{left:14px;top:calc(12px + var(--safe-t));min-width:132px}
+  #ckTarget{right:14px;top:calc(12px + var(--safe-t));min-width:132px;text-align:right}
+  #ckTarget .ckBig{color:var(--accent)}
+
+  /* steering stick, bottom left */
+  #stickPad{position:absolute;left:18px;bottom:calc(22px + var(--safe-b));width:118px;height:118px;border-radius:50%;
+    background:radial-gradient(circle,rgba(20,28,56,.62),rgba(8,12,28,.5));
+    border:1px solid rgba(124,196,255,.24);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    touch-action:none}
+  #stickPad::before,#stickPad::after{content:"";position:absolute;background:rgba(124,196,255,.13)}
+  #stickPad::before{left:12%;right:12%;top:50%;height:1px}
+  #stickPad::after{top:12%;bottom:12%;left:50%;width:1px}
+  #stickKnob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+    background:radial-gradient(circle at 36% 32%,rgba(150,205,255,.95),rgba(70,120,190,.85));
+    box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .12s ease-out}
+  #stickPad.grab #stickKnob{transition:none}
+
+  /* thrust lever, bottom right */
+  #thrWrap{position:absolute;right:18px;bottom:calc(22px + var(--safe-b));width:76px;
+    display:flex;flex-direction:column;align-items:center;gap:7px}
+  #thrBar{position:relative;width:56px;height:158px;border-radius:15px;overflow:hidden;
+    background:rgba(8,12,28,.58);border:1px solid rgba(124,196,255,.24);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);touch-action:none}
+  #thrFill{position:absolute;left:0;right:0;bottom:0;height:0%;
+    background:linear-gradient(0deg,rgba(124,196,255,.5),rgba(255,212,121,.72));transition:height .06s linear}
+  #thrGrip{position:absolute;left:4px;right:4px;height:12px;border-radius:6px;background:rgba(240,246,255,.92);
+    box-shadow:0 2px 8px rgba(0,0,0,.55);bottom:0;transition:bottom .06s linear;pointer-events:none}
+  #thrVal{font-size:15px;font-weight:660;color:var(--accent2)}
+  #thrLab{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+
+  /* buttons row, bottom centre */
+  #ckBtns{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(26px + var(--safe-b));
+    display:flex;gap:8px;align-items:center}
+  .ckb{padding:9px 15px;border-radius:12px;font-size:12px;font-weight:620;letter-spacing:.04em;
+    background:rgba(8,12,28,.66);border:1px solid rgba(124,196,255,.28);color:var(--ink);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);white-space:nowrap}
+  .ckb:active{transform:scale(.95)}
+  .ckb.hide{display:none}
+  #ckVoice{width:42px;padding:9px 0;display:grid;place-items:center}
+  #ckVoice svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #ckVoice.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
+  #ckVoice.on svg{stroke:var(--accent)}
+  #ckData{border-color:rgba(255,212,121,.55);background:rgba(255,212,121,.18);color:var(--accent2)}
+  #ckExit{border-color:rgba(255,255,255,.18)}
+
+  #ckWarn{position:absolute;left:50%;top:50%;transform:translate(-50%,-118px);opacity:0;transition:opacity .2s;
+    padding:7px 16px;border-radius:999px;font-size:12px;font-weight:660;letter-spacing:.06em;text-transform:uppercase;
+    color:#ffd0d0;background:rgba(120,20,28,.6);border:1px solid rgba(255,120,120,.5);
+    backdrop-filter:blur(10px);white-space:nowrap;pointer-events:none}
+  #ckWarn.on{opacity:1;animation:warnPulse .8s ease-in-out infinite}
+  @keyframes warnPulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+  #ckHint{position:absolute;left:50%;transform:translateX(-50%);top:calc(78px + var(--safe-t));
+    font-size:11px;color:var(--muted);background:rgba(8,12,28,.6);border:1px solid rgba(124,196,255,.18);
+    padding:6px 14px;border-radius:999px;backdrop-filter:blur(12px);text-align:center;max-width:88vw;
+    transition:opacity .6s;pointer-events:none}
+  #ckHint.hide{opacity:0}
+
+  @media (max-width:640px){
+    #stickPad{width:104px;height:104px;left:14px}
+    #stickKnob{width:42px;height:42px;margin:-21px 0 0 -21px}
+    #thrWrap{right:14px;width:66px}
+    #thrBar{width:50px;height:134px}
+    #ckSpeed,#ckTarget{min-width:106px;padding:7px 11px}
+    .ckBig{font-size:16.5px}
+    /* the button row grows when "open data" appears; at the bottom it would
+       then reach under the steering stick, so on a phone it lives up top */
+    #ckBtns{top:calc(86px + var(--safe-t));bottom:auto;gap:6px}
+    #ckHint{top:calc(136px + var(--safe-t))}
+    .ckb{padding:8px 12px;font-size:11.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #ckWarn.on{animation:none;opacity:1}
+  }
+
   /* ---------- Tooltip / hint ---------- */
   #tip{position:fixed;z-index:35;pointer-events:none;padding:5px 10px;border-radius:9px;font-size:12px;
     background:rgba(8,10,24,.9);border:1px solid var(--line);transform:translate(-50%,-155%);opacity:0;transition:opacity .15s;white-space:nowrap}
@@ -251,6 +350,9 @@
     <button id="langID" class="on">ID</button>
     <button id="langEN">EN</button>
   </div>
+  <button class="iconbtn" id="pilotBtn" aria-label="pilot">
+    <svg viewBox="0 0 24 24"><path d="M12 2.6c2.6 2.2 4 5.4 4 9v4.2l2.1 2.3v1.5l-3.4-1.3H9.3L5.9 19.6v-1.5L8 15.8V11.6c0-3.6 1.4-6.8 4-9z"/><circle cx="12" cy="10" r="1.7"/></svg>
+  </button>
   <button class="iconbtn" id="helpBtn" aria-label="help">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.9 2.9 0 015.5 1.2c0 2-2.7 2.4-2.7 4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></svg>
   </button>
@@ -291,6 +393,42 @@
     <div id="voiceNote"></div>
   </div>
   <div id="pbody"></div>
+</div>
+
+<div id="cockpit">
+  <div id="ckFrame"></div>
+  <div id="ckCross"></div>
+  <div id="ckDot"></div>
+  <div id="ckWarn"></div>
+  <div id="ckHint"></div>
+
+  <div class="ckPanel" id="ckSpeed">
+    <div class="ckLab" id="ckSpdLab">Kecepatan</div>
+    <div class="ckBig"><span id="ckSpdVal">0</span></div>
+    <div class="ckSub" id="ckSpdSub"></div>
+  </div>
+
+  <div class="ckPanel" id="ckTarget">
+    <div class="ckLab" id="ckTgtLab">Terdekat</div>
+    <div class="ckBig" id="ckTgtName">—</div>
+    <div class="ckSub" id="ckTgtDist"></div>
+  </div>
+
+  <div id="stickPad"><div id="stickKnob"></div></div>
+
+  <div id="thrWrap">
+    <div id="thrBar"><i id="thrFill"></i><div id="thrGrip"></div></div>
+    <div id="thrVal">0%</div>
+    <div id="thrLab">Dorongan</div>
+  </div>
+
+  <div id="ckBtns">
+    <button class="ckb on" id="ckVoice" aria-label="voice">
+      <svg viewBox="0 0 24 24"><path d="M4 9.4h3.3L11.6 6v12L7.3 14.6H4z"/><path d="M15 9.4a3.7 3.7 0 010 5.2"/><path d="M17.7 6.8a7.4 7.4 0 010 10.4"/></svg>
+    </button>
+    <button class="ckb hide" id="ckData">Buka data</button>
+    <button class="ckb" id="ckExit">Keluar</button>
+  </div>
 </div>
 
 <div id="help"><div id="helpCard"></div></div>
@@ -342,6 +480,22 @@ const UI = {
     factsHead: "Tahukah kamu?", statsHead: "Data utama", deepHead: "Penjelasan lengkap",
     more: "Baca penjelasan lengkap", less: "Sembunyikan penjelasan",
     listen: "Bacakan", listenStop: "Hentikan",
+    pilot: "Mode pilot",
+    ckThr: "Dorongan", ckSpd: "Kecepatan", ckTgt: "Terdekat",
+    ckExit: "Keluar", ckData: "Buka data", ckVoice: "Suara komputer",
+    ckUnit: "juta km/detik", ckDistUnit: "juta km", ckLight: "× kecepatan cahaya",
+    ckHintTouch: "Geser stik untuk membelok · Tarik tuas dorongan ke atas",
+    ckHintDesk: "Panah atau WASD untuk membelok · Roda mouse untuk dorongan · Spasi untuk rem",
+    ckWarnHot: "Terlalu dekat Matahari",
+    ckWarnHit: "Menabrak permukaan",
+    sayStart: "Mesin dinyalakan. Selamat terbang, Kapten.",
+    sayFull: "Dorongan penuh.",
+    sayIdle: "Mesin siaga.",
+    sayNear: "Mendekati {name}.",
+    sayArrive: "Kita sampai di {name}. Tekan buka data untuk mempelajarinya.",
+    sayHot: "Peringatan. Terlalu dekat Matahari. Menjauh sekarang.",
+    sayHit: "Tabrakan. Kapal dipantulkan menjauh.",
+    sayExit: "Mesin dimatikan. Kembali ke peta.",
     voiceMissing: "Perangkat ini belum punya suara Bahasa Indonesia, jadi narasinya mungkin terdengar aneh. Coba pasang paket suara Indonesia di pengaturan perangkat.",
     goto: "Terbangkan aku ke sini", moonsHead: "Bulan utama",
     cmpSize: "Ukuran dibanding Bumi", cmpDay: "Panjang hari dibanding Bumi",
@@ -353,7 +507,8 @@ const UI = {
     h3t: "Ketuk planet", h3d: "Ketuk bola planet atau tombol namanya di bawah untuk membuka info detail dan terbang ke sana.",
     h4t: "Atur waktu", h4d: "Geser slider untuk mempercepat atau memperlambat orbit. Tekan tombol jeda untuk membekukan tata surya.",
     h5t: "Minta dibacakan", h5d: "Di dalam panel info ada tombol “Bacakan”. Tekan, dan cerita planetnya dibacakan dengan suara sambil kalimat yang sedang dibaca disorot.",
-    h6t: "Catatan skala", h6d: "Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar. Kalau digambar sesuai skala asli, Bumi hanya sebesar titik dan Neptunus berada 100 layar jauhnya.",
+    h7t: "Jadi pilot pesawat", h7d: "Tekan tombol roket di pojok kanan atas untuk mengambil alih kemudi. Ada tuas dorongan, stik kemudi, dan komputer kapal yang berbicara. Terbanglah ke planet mana pun yang kamu mau.",
+    h6t: "Catatan skala", h6d: "Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar. Kalau digambar sesuai skala asli, Bumi hanya sebesar titik dan Neptunus berada 100 layar jauhnya. Karena petanya dipadatkan, kapalmu ikut melaju jauh melampaui kecepatan cahaya — mesin warp seperti itu hanya ada di cerita, bukan di dunia nyata.",
     close: "Mengerti, ayo mulai", closeShort: "Tutup",
     creditsTitle: "Kredit & sumber data", creditsSub: "Dari mana angka dan gambarnya berasal.",
     creditsNote: "Dibuat untuk edukasi dan tidak berafiliasi dengan NASA maupun IAU. Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar.",
@@ -374,6 +529,22 @@ const UI = {
     factsHead: "Did you know?", statsHead: "Key data", deepHead: "Full explanation",
     more: "Read the full explanation", less: "Hide explanation",
     listen: "Read aloud", listenStop: "Stop",
+    pilot: "Pilot mode",
+    ckThr: "Thrust", ckSpd: "Speed", ckTgt: "Nearest",
+    ckExit: "Exit", ckData: "Open data", ckVoice: "Ship computer voice",
+    ckUnit: "million km/sec", ckDistUnit: "million km", ckLight: "× the speed of light",
+    ckHintTouch: "Slide the stick to steer · Pull the thrust lever up",
+    ckHintDesk: "Arrows or WASD to steer · Mouse wheel for thrust · Space to brake",
+    ckWarnHot: "Too close to the Sun",
+    ckWarnHit: "Surface impact",
+    sayStart: "Engines online. Have a good flight, Captain.",
+    sayFull: "Full thrust.",
+    sayIdle: "Engines idle.",
+    sayNear: "Approaching {name}.",
+    sayArrive: "We have arrived at {name}. Press open data to learn about it.",
+    sayHot: "Warning. Too close to the Sun. Pulling away now.",
+    sayHit: "Impact. The ship has been bounced clear.",
+    sayExit: "Engines off. Back to the map.",
     voiceMissing: "This device has no English voice installed, so the narration may sound odd. Try adding an English voice pack in your device settings.",
     goto: "Fly me there", moonsHead: "Major moons",
     cmpSize: "Size compared to Earth", cmpDay: "Day length compared to Earth",
@@ -385,7 +556,8 @@ const UI = {
     h3t: "Tap a planet", h3d: "Tap the planet itself or its name button below to open the detail panel and fly there.",
     h4t: "Control time", h4d: "Slide to speed up or slow down the orbits. Hit pause to freeze the whole solar system.",
     h5t: "Have it read to you", h5d: "Every info panel has a “Read aloud” button. Press it and the planet's story is spoken out loud, with the sentence being read highlighted as it goes.",
-    h6t: "About the scale", h6d: "Distances and sizes are deliberately compressed so every planet fits on one screen. At true scale Earth would be a single pixel and Neptune would sit 100 screens away.",
+    h7t: "Fly the ship yourself", h7d: "Press the rocket button at the top right to take the controls. There is a thrust lever, a steering stick, and a ship computer that talks to you. Fly to any planet you like.",
+    h6t: "About the scale", h6d: "Distances and sizes are deliberately compressed so every planet fits on one screen. At true scale Earth would be a single pixel and Neptune would sit 100 screens away. Because the map is compressed, your ship also travels far faster than light — a warp drive like that only exists in stories, not in the real world.",
     close: "Got it, let's go", closeShort: "Close",
     creditsTitle: "Credits & data sources", creditsSub: "Where the numbers and the imagery come from.",
     creditsNote: "Built for education and not affiliated with NASA or the IAU. Distances and sizes are deliberately compressed so every planet fits on one screen.",
@@ -1055,6 +1227,7 @@ function applyLang(){
   el('helpBtn').title = t('helpTitle');
   el('creditsBtn').title = t('creditsTitle');
   buildNav(); buildHelp(); buildCredits(); updateSpeedLabel();
+  syncCockpitLang();
   syncHudHeight();
   if(focusKey) openPanel(focusKey, false);
 }
@@ -1085,7 +1258,8 @@ function syncNav(){
 function buildHelp(){
   el('helpCard').innerHTML = `
     <h3>${t('helpTitle')}</h3><div class="sub">${t('helpSub')}</div>
-    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],['🔊','h5t','h5d'],['📏','h6t','h6d']]
+    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],
+       ['🔊','h5t','h5d'],['🚀','h7t','h7d'],['📏','h6t','h6d']]
       .map(([i,a,b])=>`<div class="hrow"><i>${i}</i><div><b>${t(a)}</b><span>${t(b)}</span></div></div>`).join('')}
     <button id="helpClose">${t('close')}</button>`;
   el('helpClose').onclick = ()=> el('help').classList.remove('open');
@@ -1451,15 +1625,34 @@ const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 let downX=0, downY=0, downT=0, moved=false;
 
+let dragId = null;
 renderer.domElement.addEventListener('pointerdown', e=>{
   downX=e.clientX; downY=e.clientY; downT=performance.now(); moved=false;
   el('hint').classList.add('hide');
+  if(pilot){                                  // dragging the view steers the ship
+    dragId = e.pointerId;
+    renderer.domElement.setPointerCapture(e.pointerId);
+    el('ckHint').classList.add('hide');
+  }
 });
 renderer.domElement.addEventListener('pointermove', e=>{
   if(Math.hypot(e.clientX-downX, e.clientY-downY) > 9) moved = true;
+  if(pilot){
+    if(e.pointerId === dragId){
+      dragIn.x = Math.max(-1, Math.min(1, (e.clientX-downX)/170));
+      dragIn.y = Math.max(-1, Math.min(1, (e.clientY-downY)/170));
+    }
+    return;
+  }
   if(!isTouch) hover(e);
 });
+function endDrag(e){
+  if(dragId === null || e.pointerId !== dragId) return;
+  dragId = null; dragIn.x = dragIn.y = 0;
+}
+renderer.domElement.addEventListener('pointercancel', endDrag);
 renderer.domElement.addEventListener('pointerup', e=>{
+  if(pilot){ endDrag(e); return; }
   if(moved || performance.now()-downT > 600) return;
   const k = pick(e.clientX, e.clientY);
   if(k) openPanel(k, true); else if(el('panel').classList.contains('open')) closePanel();
@@ -1523,6 +1716,14 @@ el('langID').onclick = ()=> setLang('id');
 el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
   if(el('langGate').classList.contains('open')) return;   // pick a language first
+  if(pilot){
+    if(steerKey(e.code, true)){ e.preventDefault(); el('ckHint').classList.add('hide'); return; }
+    if(e.code==='Space'){ e.preventDefault(); braking = true; return; }
+    if(e.key==='+' || e.key==='='){ setThrottle(throttle+0.08); return; }
+    if(e.key==='-' || e.key==='_'){ setThrottle(throttle-0.08); return; }
+    if(e.key==='Escape') exitPilot();
+    return;
+  }
   if(e.code==='Space'){ e.preventDefault(); setPause(!paused); }
   if(e.key==='Escape'){
     if(el('credits').classList.contains('open')) el('credits').classList.remove('open');
@@ -1530,6 +1731,355 @@ addEventListener('keydown', e=>{
     else closePanel();
   }
 });
+
+/* ================= pilot mode =================
+   The solar system is already a scene at a workable scale, so flying through
+   it needs no second world: OrbitControls is switched off and the camera
+   becomes the ship. The flight model is deliberately arcade — the ship goes
+   where its nose points, with enough inertia to feel heavy. True Newtonian
+   drift would leave a child tumbling and lost within seconds.               */
+const SHIP_MAX = 22;                    // display units per second at full thrust
+/* Time has to be slowed while flying. At the default 10 days/second Mercury
+   sweeps along its orbit at ~26 units/second — faster than the ship's top
+   speed — so a child could chase it forever and never catch it. */
+const PILOT_DAYS_PER_SEC = 0.8;
+let preDaysPerSec = null;
+const YAW_RATE = 1.05, PITCH_RATE = 0.85;
+const AU_MKM = 149.6;                   // million km in one AU
+const C_MKMS = 0.299792;                // speed of light, million km per second
+
+let pilot = false;
+let throttle = 0, braking = false;
+let ckVoiceOn = true;
+const shipQuat = new THREE.Quaternion();
+const shipVel = new THREE.Vector3();
+const stickIn = {x:0, y:0}, dragIn = {x:0, y:0}, keyIn = {x:0, y:0};
+const AXIS_X = new THREE.Vector3(1,0,0), AXIS_Y = new THREE.Vector3(0,1,0);
+const ORIGIN = new THREE.Vector3();
+const shipFwd = new THREE.Vector3(), vTmpA = new THREE.Vector3(), vTmpB = new THREE.Vector3();
+const vReal = new THREE.Vector3(), vRealPrev = new THREE.Vector3(), vRealB = new THREE.Vector3();
+const qTmp = new THREE.Quaternion(), mTmp = new THREE.Matrix4();
+let realSpeed = 0;                      // million km/s, smoothed
+let nearKey = null, arrivedKey = null;
+let hudClock = 0, warnUntil = 0;
+let sayBusy = false;
+const sayLast = {};
+
+/* The map compresses distance as r = orbBase + orbK * AU^orbExp. Inverting it
+   turns a point on the map back into a real distance from the Sun, which is
+   what the cockpit readouts show — the direction is already true. */
+function mapToAU(r){
+  return r <= S.orbBase ? 0 : Math.pow((r - S.orbBase)/S.orbK, 1/S.orbExp);
+}
+function realPos(v, out){
+  const r = v.length();
+  if(r < 1e-6) return out.set(0,0,0);
+  return out.copy(v).multiplyScalar(mapToAU(r)/r);
+}
+
+/* One-line callouts from the ship's computer. Deliberately droppable: if a
+   line is already playing, a new low-priority one is skipped rather than
+   queued, so the cockpit never falls behind what the child is doing. */
+function sayComputer(text, force){
+  if(!speechOK || !ckVoiceOn || !text) return false;
+  if(!force && (speaking || sayBusy)) return false;
+  try{
+    const u = new SpeechSynthesisUtterance(speakClean(text));
+    const v = pickVoice();
+    if(v) u.voice = v;
+    u.lang = v ? v.lang : (lang==='id' ? 'id-ID' : 'en-US');
+    u.rate = 1.0; u.pitch = 0.92;        // flatter than the storytelling voice
+    sayBusy = true;
+    u.onend = ()=>{ sayBusy = false; };
+    u.onerror = ()=>{ sayBusy = false; };
+    if(force){
+      // same rule as the panel narration: Safari drops a speak() issued in the
+      // same tick as a cancel(), so let the cancel land first
+      synth.cancel();
+      setTimeout(()=>{ try{ synth.resume(); synth.speak(u); }catch(e){ sayBusy = false; } }, 90);
+    } else {
+      synth.resume(); synth.speak(u);
+    }
+    return true;
+  }catch(e){ sayBusy = false; return false; }
+}
+/* Returns whether the line actually went out — a caller that latches state on
+   a callout must not latch when the line was dropped, or it is lost for good. */
+function sayOnce(kind, text, gapMs, force){
+  const now = performance.now();
+  if(sayLast[kind] && now - sayLast[kind] < gapMs) return false;
+  const spoke = sayComputer(text, force);
+  if(spoke) sayLast[kind] = now;
+  return spoke;
+}
+
+function syncCockpitLang(){
+  el('ckSpdLab').textContent = t('ckSpd');
+  el('ckTgtLab').textContent = t('ckTgt');
+  el('thrLab').textContent = t('ckThr');
+  el('ckExit').textContent = t('ckExit');
+  el('ckData').textContent = t('ckData');
+  el('ckVoice').title = t('ckVoice');
+  el('pilotBtn').title = t('pilot');
+  el('ckHint').textContent = isTouch ? t('ckHintTouch') : t('ckHintDesk');
+}
+
+function setThrottle(v){
+  const was = throttle;
+  throttle = Math.max(0, Math.min(1, v));
+  // snap at both ends: a child's finger never lands exactly on the stops,
+  // and "99%" instead of full thrust is a frustrating way to lose a race
+  if(throttle > 0.96) throttle = 1;
+  else if(throttle < 0.04) throttle = 0;
+  el('thrFill').style.height = (throttle*100).toFixed(1) + '%';
+  el('thrGrip').style.bottom = `calc(2px + ${throttle.toFixed(3)} * (100% - 16px))`;
+  el('thrVal').textContent = Math.round(throttle*100) + '%';
+  if(!pilot) return;
+  if(throttle > 0.995 && was <= 0.995) sayOnce('full', t('sayFull'), 12000);
+  if(throttle < 0.005 && was >= 0.005) sayOnce('idle', t('sayIdle'), 12000);
+}
+
+function warn(text){
+  el('ckWarn').textContent = text;
+  el('ckWarn').classList.add('on');
+  warnUntil = performance.now() + 1600;
+}
+
+function enterPilot(){
+  if(pilot) return;
+  pilot = true;
+  stopSpeak(); closePanel();
+  flight = null; followObj = null;
+  controls.enabled = false;
+  preDaysPerSec = daysPerSec;
+  if(daysPerSec > PILOT_DAYS_PER_SEC) daysPerSec = PILOT_DAYS_PER_SEC;
+  setThrottle(0);
+  shipVel.set(0,0,0);
+  stickIn.x = stickIn.y = dragIn.x = dragIn.y = keyIn.x = keyIn.y = 0;
+  braking = false;
+  nearKey = arrivedKey = null;
+  realSpeed = 0;
+  // take over facing whatever the user was already looking at
+  mTmp.lookAt(camera.position, controls.target, UP_Y);
+  shipQuat.setFromRotationMatrix(mTmp);
+  camera.up.set(0,1,0);
+  realPos(camera.position, vRealPrev);
+
+  el('cockpit').classList.add('open');
+  el('pilotBtn').classList.add('on');
+  el('nav').style.display = 'none';
+  el('hud').style.display = 'none';
+  // the map's own chrome would sit right under the cockpit readouts, and none
+  // of it is reachable while flying anyway — the cockpit has its own exit
+  el('top').style.display = 'none';
+  el('hint').classList.add('hide');
+  tip.classList.remove('on');
+  el('ckData').classList.add('hide');
+  el('ckWarn').classList.remove('on');
+  el('ckHint').classList.remove('hide');
+  setTimeout(()=>{ if(pilot) el('ckHint').classList.add('hide'); }, 12000);
+  syncCockpitLang();
+  sayComputer(t('sayStart'), true);
+}
+
+function exitPilot(openKey){
+  if(!pilot) return;
+  pilot = false;
+  el('cockpit').classList.remove('open');
+  el('pilotBtn').classList.remove('on');
+  el('nav').style.display = '';
+  el('hud').style.display = '';
+  el('top').style.display = '';
+  el('ckWarn').classList.remove('on');
+  if(preDaysPerSec !== null){ daysPerSec = preDaysPerSec; preDaysPerSec = null; updateSpeedLabel(); }
+  // hand a sane orbit centre back to OrbitControls: a point ahead of the ship
+  shipFwd.set(0,0,-1).applyQuaternion(camera.quaternion);
+  controls.target.copy(camera.position).addScaledVector(shipFwd, 26);
+  camera.up.set(0,1,0);
+  controls.enabled = true;
+  controls.update();
+  syncHudHeight();
+  if(openKey) openPanel(openKey, true);
+  else { try{ synth.cancel(); }catch(e){} sayBusy = false; sayComputer(t('sayExit'), true); }
+}
+
+function updateShip(dt){
+  const ix = Math.max(-1, Math.min(1, keyIn.x + stickIn.x + dragIn.x));
+  const iy = Math.max(-1, Math.min(1, keyIn.y + stickIn.y + dragIn.y));
+
+  qTmp.setFromAxisAngle(AXIS_Y, -ix * YAW_RATE * dt);   shipQuat.multiply(qTmp);
+  qTmp.setFromAxisAngle(AXIS_X, -iy * PITCH_RATE * dt); shipQuat.multiply(qTmp);
+
+  // bleed off accumulated roll, so the ship never ends up flying upside down
+  shipFwd.set(0,0,-1).applyQuaternion(shipQuat);
+  vTmpA.copy(UP_Y).addScaledVector(shipFwd, -UP_Y.dot(shipFwd));
+  if(vTmpA.lengthSq() > 1e-5){
+    vTmpA.normalize();
+    mTmp.lookAt(ORIGIN, shipFwd, vTmpA);
+    qTmp.setFromRotationMatrix(mTmp);
+    shipQuat.slerp(qTmp, 1 - Math.exp(-1.8*dt));
+  }
+  shipQuat.normalize();
+
+  shipFwd.set(0,0,-1).applyQuaternion(shipQuat);
+  vTmpB.copy(shipFwd).multiplyScalar(throttle*throttle*SHIP_MAX);
+  shipVel.lerp(vTmpB, 1 - Math.exp(-1.5*dt));
+  if(braking) shipVel.multiplyScalar(Math.exp(-3.4*dt));
+
+  camera.position.addScaledVector(shipVel, dt);
+  camera.quaternion.copy(shipQuat);
+
+  /* nearest body — drives the readout, the callouts and the collision check */
+  let best = null, bestSurf = Infinity;
+  for(const b of bodies){
+    (b.holder || sun).getWorldPosition(vTmpA);
+    const dist = camera.position.distanceTo(vTmpA);
+    const surf = dist - b.dispR;
+    if(surf < bestSurf){ bestSurf = surf; best = b; }
+  }
+
+  // the Sun is the one place a child can actually get into trouble, and that
+  // warning outranks the cheerful "we have arrived" line for the same body
+  // set wider than the arrival band (1.7 × radius) so the warning always wins
+  // the race against a cheery "we have arrived at the Sun"
+  const sunHot = camera.position.length() < S.sunR*3.0;
+  if(sunHot){
+    warn(t('ckWarnHot'));
+    sayOnce('hot', t('sayHot'), 9000);
+  }
+
+  if(best){
+    (best.holder || sun).getWorldPosition(vTmpA);
+    const minR = best.dispR * 1.06;
+    const dist = camera.position.distanceTo(vTmpA);
+    if(dist < minR){
+      vTmpB.copy(camera.position).sub(vTmpA);
+      if(vTmpB.lengthSq() < 1e-6) vTmpB.set(0, 0, 1);
+      vTmpB.normalize();
+      camera.position.copy(vTmpA).addScaledVector(vTmpB, minR);
+      const into = shipVel.dot(vTmpB);
+      if(into < 0) shipVel.addScaledVector(vTmpB, -into*1.7);   // bounce back out
+      warn(t('ckWarnHit'));
+      sayOnce('hit', t('sayHit'), 4000);
+    }
+
+    const key = best.data.key;
+    if(bestSurf < best.dispR*1.7){
+      if(arrivedKey !== key){
+        arrivedKey = key;
+        el('ckData').classList.remove('hide');
+        if(!sunHot) sayOnce('arrive:'+key, t('sayArrive').replace('{name}', best.data.name[lang]), 8000, true);
+      }
+    } else if(bestSurf > best.dispR*3.2 && arrivedKey === key){
+      arrivedKey = null;
+      el('ckData').classList.add('hide');
+    }
+    if(bestSurf < best.dispR*7 && nearKey !== key && arrivedKey !== key){
+      // latch only once the line is actually out, so a callout that lost the
+      // race with the engine-start greeting is retried instead of swallowed
+      if(sayOnce('near:'+key, t('sayNear').replace('{name}', best.data.name[lang]), 8000)) nearKey = key;
+    } else if(bestSurf > best.dispR*11 && nearKey === key){
+      nearKey = null;
+    }
+  }
+
+  // real distance & speed, recovered from the compressed map
+  realPos(camera.position, vReal);
+  const stepMkm = vReal.distanceTo(vRealPrev) * AU_MKM;
+  vRealPrev.copy(vReal);
+  const inst = dt > 0 ? stepMkm/dt : 0;
+  realSpeed += (inst - realSpeed) * (1 - Math.exp(-4*dt));
+
+  hudClock += dt;
+  if(hudClock >= 0.1){
+    hudClock = 0;
+    el('ckSpdVal').textContent = fmt(realSpeed, realSpeed<10 ? 1 : 0) + ' ' + t('ckUnit');
+    el('ckSpdSub').textContent = realSpeed > 0.05
+      ? fmt(realSpeed/C_MKMS, realSpeed/C_MKMS<10 ? 1 : 0) + ' ' + t('ckLight') : '';
+    if(best){
+      (best.holder || sun).getWorldPosition(vTmpA);
+      realPos(vTmpA, vRealB);
+      el('ckTgtName').textContent = best.data.name[lang];
+      el('ckTgtDist').textContent = fmt(vReal.distanceTo(vRealB)*AU_MKM, 1) + ' ' + t('ckDistUnit');
+    }
+  }
+  if(warnUntil && performance.now() > warnUntil){
+    warnUntil = 0;
+    el('ckWarn').classList.remove('on');
+  }
+}
+
+/* ---- cockpit input ---- */
+const stickPad = el('stickPad'), stickKnob = el('stickKnob');
+let stickId = null;
+function moveStick(e){
+  const r = stickPad.getBoundingClientRect();
+  let x = (e.clientX - (r.left + r.width/2)) / (r.width/2);
+  let y = (e.clientY - (r.top + r.height/2)) / (r.height/2);
+  const m = Math.hypot(x, y);
+  if(m > 1){ x /= m; y /= m; }
+  stickIn.x = x; stickIn.y = y;
+  stickKnob.style.transform = `translate(${(x*r.width*0.29).toFixed(1)}px,${(y*r.height*0.29).toFixed(1)}px)`;
+}
+function endStick(e){
+  if(stickId !== null && e.pointerId !== stickId) return;
+  stickId = null; stickIn.x = stickIn.y = 0;
+  stickPad.classList.remove('grab');
+  stickKnob.style.transform = '';
+}
+stickPad.addEventListener('pointerdown', e=>{
+  stickId = e.pointerId; stickPad.setPointerCapture(e.pointerId);
+  stickPad.classList.add('grab'); moveStick(e); e.preventDefault();
+});
+stickPad.addEventListener('pointermove', e=>{ if(e.pointerId === stickId) moveStick(e); });
+stickPad.addEventListener('pointerup', endStick);
+stickPad.addEventListener('pointercancel', endStick);
+
+const thrBar = el('thrBar');
+let thrId = null;
+function moveThr(e){
+  const r = thrBar.getBoundingClientRect();
+  setThrottle(1 - (e.clientY - r.top)/r.height);
+}
+thrBar.addEventListener('pointerdown', e=>{
+  thrId = e.pointerId; thrBar.setPointerCapture(e.pointerId); moveThr(e); e.preventDefault();
+});
+thrBar.addEventListener('pointermove', e=>{ if(e.pointerId === thrId) moveThr(e); });
+thrBar.addEventListener('pointerup', e=>{ if(e.pointerId === thrId) thrId = null; });
+thrBar.addEventListener('pointercancel', ()=>{ thrId = null; });
+
+renderer.domElement.addEventListener('wheel', e=>{
+  if(!pilot) return;
+  e.preventDefault();
+  setThrottle(throttle - Math.sign(e.deltaY)*0.06);
+}, {passive:false});
+
+const STEER_KEYS = {
+  ArrowLeft:['x',-1], KeyA:['x',-1], ArrowRight:['x',1],  KeyD:['x',1],
+  ArrowUp:  ['y',-1], KeyW:['y',-1], ArrowDown:['y',1],   KeyS:['y',1]
+};
+function steerKey(code, down){
+  const m = STEER_KEYS[code];
+  if(!m) return false;
+  keyIn[m[0]] = down ? m[1] : (keyIn[m[0]] === m[1] ? 0 : keyIn[m[0]]);
+  return true;
+}
+addEventListener('keyup', e=>{
+  if(!pilot) return;
+  if(steerKey(e.code, false)) e.preventDefault();
+  if(e.code === 'Space') braking = false;
+});
+addEventListener('blur', ()=>{ keyIn.x = keyIn.y = 0; braking = false; });
+
+el('pilotBtn').onclick = ()=>{ pilot ? exitPilot() : enterPilot(); };
+el('ckExit').onclick = ()=> exitPilot();
+el('ckData').onclick = ()=> exitPilot(arrivedKey);
+el('ckVoice').onclick = ()=>{
+  ckVoiceOn = !ckVoiceOn;
+  el('ckVoice').classList.toggle('on', ckVoiceOn);
+  if(!ckVoiceOn){ try{ synth.cancel(); }catch(e){} sayBusy = false; }
+};
+setThrottle(0);
 
 /* ================= layout ================= */
 /* The planet chips must sit right above the control card, never behind it.
@@ -1617,8 +2167,10 @@ function animate(){
   // asteroid belt (differential rotation, per Kepler's law)
   if(!paused) for(const b of beltBands) b.g.rotation.y += b.rate*daysPerSec*dt*0.9;
 
-  // camera flight
-  if(flight){
+  // camera: either the child is flying it, or it is on rails
+  if(pilot){
+    updateShip(dt);
+  } else if(flight){
     flight.t += dt/flight.dur;
     const k = easeIO(Math.min(1, flight.t));
     // moving target? follow its current position
@@ -1642,7 +2194,7 @@ function animate(){
     controls.target.copy(vpos);
   }
 
-  controls.update();
+  if(!pilot) controls.update();
 
   // sync the camera matrices BEFORE projecting the labels,
   // so labels never lag one frame behind the rendered image
@@ -1688,7 +2240,10 @@ window.__dbg = () => ({
   cam: camera.position.toArray().map(v=>+v.toFixed(1)),
   tgt: controls.target.toArray().map(v=>+v.toFixed(1)),
   dist: +camera.position.distanceTo(controls.target).toFixed(2),
-  follow: followObj, flying: !!flight
+  follow: followObj, flying: !!flight,
+  pilot, throttle: +throttle.toFixed(2),
+  fwd: new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3)),
+  up: new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3))
 });
 
 applyLang();

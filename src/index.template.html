@@ -164,6 +164,105 @@
   .cmpbar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .cmplab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted)}
 
+  /* ---------- Pilot mode cockpit ---------- */
+  #cockpit{position:fixed;inset:0;z-index:29;display:none;pointer-events:none;
+    font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
+  #cockpit.open{display:block}
+  #cockpit>*{pointer-events:auto}
+  /* the canopy: a vignette plus a thin frame, enough to read as "inside a ship" */
+  #ckFrame{position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 150px 34px rgba(3,6,18,.72)}
+  #ckFrame::after{content:"";position:absolute;inset:9px;border-radius:20px;
+    border:1px solid rgba(124,196,255,.14)}
+  #ckCross{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none;
+    border:1px solid rgba(124,196,255,.34);border-radius:50%}
+  #ckCross::before,#ckCross::after{content:"";position:absolute;background:rgba(124,196,255,.5)}
+  #ckCross::before{left:50%;top:-10px;width:1px;height:9px;margin-left:-.5px}
+  #ckCross::after{left:50%;bottom:-10px;width:1px;height:9px;margin-left:-.5px}
+  #ckDot{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;
+    background:var(--accent2);box-shadow:0 0 7px 1px rgba(255,212,121,.7)}
+
+  .ckPanel{position:absolute;background:rgba(8,12,28,.6);border:1px solid rgba(124,196,255,.22);
+    border-radius:13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:9px 13px}
+  .ckLab{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+  .ckBig{font-size:19px;font-weight:660;color:var(--accent2);line-height:1.15}
+  .ckSub{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+  #ckSpeed{left:14px;top:calc(12px + var(--safe-t));min-width:132px}
+  #ckTarget{right:14px;top:calc(12px + var(--safe-t));min-width:132px;text-align:right}
+  #ckTarget .ckBig{color:var(--accent)}
+
+  /* steering stick, bottom left */
+  #stickPad{position:absolute;left:18px;bottom:calc(22px + var(--safe-b));width:118px;height:118px;border-radius:50%;
+    background:radial-gradient(circle,rgba(20,28,56,.62),rgba(8,12,28,.5));
+    border:1px solid rgba(124,196,255,.24);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    touch-action:none}
+  #stickPad::before,#stickPad::after{content:"";position:absolute;background:rgba(124,196,255,.13)}
+  #stickPad::before{left:12%;right:12%;top:50%;height:1px}
+  #stickPad::after{top:12%;bottom:12%;left:50%;width:1px}
+  #stickKnob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+    background:radial-gradient(circle at 36% 32%,rgba(150,205,255,.95),rgba(70,120,190,.85));
+    box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .12s ease-out}
+  #stickPad.grab #stickKnob{transition:none}
+
+  /* thrust lever, bottom right */
+  #thrWrap{position:absolute;right:18px;bottom:calc(22px + var(--safe-b));width:76px;
+    display:flex;flex-direction:column;align-items:center;gap:7px}
+  #thrBar{position:relative;width:56px;height:158px;border-radius:15px;overflow:hidden;
+    background:rgba(8,12,28,.58);border:1px solid rgba(124,196,255,.24);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);touch-action:none}
+  #thrFill{position:absolute;left:0;right:0;bottom:0;height:0%;
+    background:linear-gradient(0deg,rgba(124,196,255,.5),rgba(255,212,121,.72));transition:height .06s linear}
+  #thrGrip{position:absolute;left:4px;right:4px;height:12px;border-radius:6px;background:rgba(240,246,255,.92);
+    box-shadow:0 2px 8px rgba(0,0,0,.55);bottom:0;transition:bottom .06s linear;pointer-events:none}
+  #thrVal{font-size:15px;font-weight:660;color:var(--accent2)}
+  #thrLab{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+
+  /* buttons row, bottom centre */
+  #ckBtns{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(26px + var(--safe-b));
+    display:flex;gap:8px;align-items:center}
+  .ckb{padding:9px 15px;border-radius:12px;font-size:12px;font-weight:620;letter-spacing:.04em;
+    background:rgba(8,12,28,.66);border:1px solid rgba(124,196,255,.28);color:var(--ink);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);white-space:nowrap}
+  .ckb:active{transform:scale(.95)}
+  .ckb.hide{display:none}
+  #ckVoice{width:42px;padding:9px 0;display:grid;place-items:center}
+  #ckVoice svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #ckVoice.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
+  #ckVoice.on svg{stroke:var(--accent)}
+  #ckData{border-color:rgba(255,212,121,.55);background:rgba(255,212,121,.18);color:var(--accent2)}
+  #ckExit{border-color:rgba(255,255,255,.18)}
+
+  #ckWarn{position:absolute;left:50%;top:50%;transform:translate(-50%,-118px);opacity:0;transition:opacity .2s;
+    padding:7px 16px;border-radius:999px;font-size:12px;font-weight:660;letter-spacing:.06em;text-transform:uppercase;
+    color:#ffd0d0;background:rgba(120,20,28,.6);border:1px solid rgba(255,120,120,.5);
+    backdrop-filter:blur(10px);white-space:nowrap;pointer-events:none}
+  #ckWarn.on{opacity:1;animation:warnPulse .8s ease-in-out infinite}
+  @keyframes warnPulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+  #ckHint{position:absolute;left:50%;transform:translateX(-50%);top:calc(78px + var(--safe-t));
+    font-size:11px;color:var(--muted);background:rgba(8,12,28,.6);border:1px solid rgba(124,196,255,.18);
+    padding:6px 14px;border-radius:999px;backdrop-filter:blur(12px);text-align:center;max-width:88vw;
+    transition:opacity .6s;pointer-events:none}
+  #ckHint.hide{opacity:0}
+
+  @media (max-width:640px){
+    #stickPad{width:104px;height:104px;left:14px}
+    #stickKnob{width:42px;height:42px;margin:-21px 0 0 -21px}
+    #thrWrap{right:14px;width:66px}
+    #thrBar{width:50px;height:134px}
+    #ckSpeed,#ckTarget{min-width:106px;padding:7px 11px}
+    .ckBig{font-size:16.5px}
+    /* the button row grows when "open data" appears; at the bottom it would
+       then reach under the steering stick, so on a phone it lives up top */
+    #ckBtns{top:calc(86px + var(--safe-t));bottom:auto;gap:6px}
+    #ckHint{top:calc(136px + var(--safe-t))}
+    .ckb{padding:8px 12px;font-size:11.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #ckWarn.on{animation:none;opacity:1}
+  }
+
   /* ---------- Tooltip / hint ---------- */
   #tip{position:fixed;z-index:35;pointer-events:none;padding:5px 10px;border-radius:9px;font-size:12px;
     background:rgba(8,10,24,.9);border:1px solid var(--line);transform:translate(-50%,-155%);opacity:0;transition:opacity .15s;white-space:nowrap}
@@ -251,6 +350,9 @@
     <button id="langID" class="on">ID</button>
     <button id="langEN">EN</button>
   </div>
+  <button class="iconbtn" id="pilotBtn" aria-label="pilot">
+    <svg viewBox="0 0 24 24"><path d="M12 2.6c2.6 2.2 4 5.4 4 9v4.2l2.1 2.3v1.5l-3.4-1.3H9.3L5.9 19.6v-1.5L8 15.8V11.6c0-3.6 1.4-6.8 4-9z"/><circle cx="12" cy="10" r="1.7"/></svg>
+  </button>
   <button class="iconbtn" id="helpBtn" aria-label="help">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.9 2.9 0 015.5 1.2c0 2-2.7 2.4-2.7 4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></svg>
   </button>
@@ -291,6 +393,42 @@
     <div id="voiceNote"></div>
   </div>
   <div id="pbody"></div>
+</div>
+
+<div id="cockpit">
+  <div id="ckFrame"></div>
+  <div id="ckCross"></div>
+  <div id="ckDot"></div>
+  <div id="ckWarn"></div>
+  <div id="ckHint"></div>
+
+  <div class="ckPanel" id="ckSpeed">
+    <div class="ckLab" id="ckSpdLab">Kecepatan</div>
+    <div class="ckBig"><span id="ckSpdVal">0</span></div>
+    <div class="ckSub" id="ckSpdSub"></div>
+  </div>
+
+  <div class="ckPanel" id="ckTarget">
+    <div class="ckLab" id="ckTgtLab">Terdekat</div>
+    <div class="ckBig" id="ckTgtName">—</div>
+    <div class="ckSub" id="ckTgtDist"></div>
+  </div>
+
+  <div id="stickPad"><div id="stickKnob"></div></div>
+
+  <div id="thrWrap">
+    <div id="thrBar"><i id="thrFill"></i><div id="thrGrip"></div></div>
+    <div id="thrVal">0%</div>
+    <div id="thrLab">Dorongan</div>
+  </div>
+
+  <div id="ckBtns">
+    <button class="ckb on" id="ckVoice" aria-label="voice">
+      <svg viewBox="0 0 24 24"><path d="M4 9.4h3.3L11.6 6v12L7.3 14.6H4z"/><path d="M15 9.4a3.7 3.7 0 010 5.2"/><path d="M17.7 6.8a7.4 7.4 0 010 10.4"/></svg>
+    </button>
+    <button class="ckb hide" id="ckData">Buka data</button>
+    <button class="ckb" id="ckExit">Keluar</button>
+  </div>
 </div>
 
 <div id="help"><div id="helpCard"></div></div>
