@@ -18,6 +18,7 @@ An interactive 3D solar-system simulation built for education — orbit it, zoom
 | 🌗 **Rotation & tilt** | True rotation periods and axial tilts; Venus and Uranus spin retrograde |
 | ⏱️ **Time control** | 0.01 – 600 days/second, with a pause button |
 | 🔊 **Read aloud** | Every info panel can be narrated out loud in either language, highlighting each paragraph as it is read — for children who are not fluent readers yet |
+| 🚀 **Pilot mode** | Take the controls: a thrust lever, a steering stick, and a talking ship computer. Fly to any planet and open its data on arrival |
 | 🌐 **Bilingual** | The language is chosen on first launch (and remembered), and the ID/EN buttons switch the entire interface *and* all content at any time |
 | 📄 **In-app credits** | A credits button in the top bar lists every data and texture source, with links |
 | 📱 **Mobile-first** | The info panel becomes a bottom sheet, touch targets are enlarged, and the camera reframes itself automatically |
@@ -49,6 +50,40 @@ Voice quality is the device's, not the app's. Android, iOS, Windows and macOS al
 Indonesian voice; some desktop Linux browsers do not, and in that case the panel says so
 instead of reading Indonesian text with an English voice and pretending it worked. The button
 is hidden entirely on browsers without the API.
+
+### Pilot mode
+
+The rocket button in the top bar hands the controls over: the camera becomes a ship
+with a thrust lever, a steering stick, and a cockpit readout of speed, nearest body
+and distance. Fly to a planet and an **Open data** button appears, which drops you
+back onto the map with that planet's info panel open — narration included.
+
+There is no second scene. `OrbitControls` is switched off and the camera is driven
+directly, so pilot mode inherits the same planets, orbits and asteroid belt the map
+already simulates.
+
+Some deliberate choices:
+
+- **The flight model is arcade, not Newtonian.** The ship goes where its nose points,
+  with enough inertia to feel heavy, and it quietly rolls itself level. Real orbital
+  drift would leave a child tumbling and lost inside ten seconds.
+- **Time slows down while flying.** At the map's default 10 days/second Mercury races
+  along its orbit at ~26 units/second, faster than the ship's top speed — a child
+  could chase it forever and never catch it. Pilot mode clamps time to 0.8 days/second
+  and restores your setting on exit.
+- **You cannot fly through anything.** Getting inside a body pushes the ship back out
+  and bounces it clear; the Sun warns you off before you get there.
+- **The readouts are real.** Speed and distance are recovered by inverting the map's
+  own distance compression, which is also why the ship reads as travelling hundreds of
+  times the speed of light. Rather than hide that, the help sheet names it: a warp
+  drive like that only exists in stories.
+
+The ship computer speaks its callouts — engine start, full thrust, approaching a
+planet, arrival, and the Sun warning — through the same Web Speech API as the panel
+narration, in whichever language is selected, and can be muted from the cockpit.
+
+Controls: drag or arrows/WASD to steer, the lever or the mouse wheel for thrust,
+space to brake, Escape to leave.
 
 ---
 

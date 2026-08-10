@@ -382,6 +382,7 @@ function applyLang(){
   el('helpBtn').title = t('helpTitle');
   el('creditsBtn').title = t('creditsTitle');
   buildNav(); buildHelp(); buildCredits(); updateSpeedLabel();
+  syncCockpitLang();
   syncHudHeight();
   if(focusKey) openPanel(focusKey, false);
 }
@@ -412,7 +413,8 @@ function syncNav(){
 function buildHelp(){
   el('helpCard').innerHTML = `
     <h3>${t('helpTitle')}</h3><div class="sub">${t('helpSub')}</div>
-    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],['🔊','h5t','h5d'],['📏','h6t','h6d']]
+    ${[['🖐️','h1t','h1d'],['🔍','h2t','h2d'],['👆','h3t','h3d'],['⏱️','h4t','h4d'],
+       ['🔊','h5t','h5d'],['🚀','h7t','h7d'],['📏','h6t','h6d']]
       .map(([i,a,b])=>`<div class="hrow"><i>${i}</i><div><b>${t(a)}</b><span>${t(b)}</span></div></div>`).join('')}
     <button id="helpClose">${t('close')}</button>`;
   el('helpClose').onclick = ()=> el('help').classList.remove('open');
@@ -778,15 +780,34 @@ const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 let downX=0, downY=0, downT=0, moved=false;
 
+let dragId = null;
 renderer.domElement.addEventListener('pointerdown', e=>{
   downX=e.clientX; downY=e.clientY; downT=performance.now(); moved=false;
   el('hint').classList.add('hide');
+  if(pilot){                                  // dragging the view steers the ship
+    dragId = e.pointerId;
+    renderer.domElement.setPointerCapture(e.pointerId);
+    el('ckHint').classList.add('hide');
+  }
 });
 renderer.domElement.addEventListener('pointermove', e=>{
   if(Math.hypot(e.clientX-downX, e.clientY-downY) > 9) moved = true;
+  if(pilot){
+    if(e.pointerId === dragId){
+      dragIn.x = Math.max(-1, Math.min(1, (e.clientX-downX)/170));
+      dragIn.y = Math.max(-1, Math.min(1, (e.clientY-downY)/170));
+    }
+    return;
+  }
   if(!isTouch) hover(e);
 });
+function endDrag(e){
+  if(dragId === null || e.pointerId !== dragId) return;
+  dragId = null; dragIn.x = dragIn.y = 0;
+}
+renderer.domElement.addEventListener('pointercancel', endDrag);
 renderer.domElement.addEventListener('pointerup', e=>{
+  if(pilot){ endDrag(e); return; }
   if(moved || performance.now()-downT > 600) return;
   const k = pick(e.clientX, e.clientY);
   if(k) openPanel(k, true); else if(el('panel').classList.contains('open')) closePanel();
@@ -850,6 +871,14 @@ el('langID').onclick = ()=> setLang('id');
 el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
   if(el('langGate').classList.contains('open')) return;   // pick a language first
+  if(pilot){
+    if(steerKey(e.code, true)){ e.preventDefault(); el('ckHint').classList.add('hide'); return; }
+    if(e.code==='Space'){ e.preventDefault(); braking = true; return; }
+    if(e.key==='+' || e.key==='='){ setThrottle(throttle+0.08); return; }
+    if(e.key==='-' || e.key==='_'){ setThrottle(throttle-0.08); return; }
+    if(e.key==='Escape') exitPilot();
+    return;
+  }
   if(e.code==='Space'){ e.preventDefault(); setPause(!paused); }
   if(e.key==='Escape'){
     if(el('credits').classList.contains('open')) el('credits').classList.remove('open');
@@ -857,6 +886,355 @@ addEventListener('keydown', e=>{
     else closePanel();
   }
 });
+
+/* ================= pilot mode =================
+   The solar system is already a scene at a workable scale, so flying through
+   it needs no second world: OrbitControls is switched off and the camera
+   becomes the ship. The flight model is deliberately arcade — the ship goes
+   where its nose points, with enough inertia to feel heavy. True Newtonian
+   drift would leave a child tumbling and lost within seconds.               */
+const SHIP_MAX = 22;                    // display units per second at full thrust
+/* Time has to be slowed while flying. At the default 10 days/second Mercury
+   sweeps along its orbit at ~26 units/second — faster than the ship's top
+   speed — so a child could chase it forever and never catch it. */
+const PILOT_DAYS_PER_SEC = 0.8;
+let preDaysPerSec = null;
+const YAW_RATE = 1.05, PITCH_RATE = 0.85;
+const AU_MKM = 149.6;                   // million km in one AU
+const C_MKMS = 0.299792;                // speed of light, million km per second
+
+let pilot = false;
+let throttle = 0, braking = false;
+let ckVoiceOn = true;
+const shipQuat = new THREE.Quaternion();
+const shipVel = new THREE.Vector3();
+const stickIn = {x:0, y:0}, dragIn = {x:0, y:0}, keyIn = {x:0, y:0};
+const AXIS_X = new THREE.Vector3(1,0,0), AXIS_Y = new THREE.Vector3(0,1,0);
+const ORIGIN = new THREE.Vector3();
+const shipFwd = new THREE.Vector3(), vTmpA = new THREE.Vector3(), vTmpB = new THREE.Vector3();
+const vReal = new THREE.Vector3(), vRealPrev = new THREE.Vector3(), vRealB = new THREE.Vector3();
+const qTmp = new THREE.Quaternion(), mTmp = new THREE.Matrix4();
+let realSpeed = 0;                      // million km/s, smoothed
+let nearKey = null, arrivedKey = null;
+let hudClock = 0, warnUntil = 0;
+let sayBusy = false;
+const sayLast = {};
+
+/* The map compresses distance as r = orbBase + orbK * AU^orbExp. Inverting it
+   turns a point on the map back into a real distance from the Sun, which is
+   what the cockpit readouts show — the direction is already true. */
+function mapToAU(r){
+  return r <= S.orbBase ? 0 : Math.pow((r - S.orbBase)/S.orbK, 1/S.orbExp);
+}
+function realPos(v, out){
+  const r = v.length();
+  if(r < 1e-6) return out.set(0,0,0);
+  return out.copy(v).multiplyScalar(mapToAU(r)/r);
+}
+
+/* One-line callouts from the ship's computer. Deliberately droppable: if a
+   line is already playing, a new low-priority one is skipped rather than
+   queued, so the cockpit never falls behind what the child is doing. */
+function sayComputer(text, force){
+  if(!speechOK || !ckVoiceOn || !text) return false;
+  if(!force && (speaking || sayBusy)) return false;
+  try{
+    const u = new SpeechSynthesisUtterance(speakClean(text));
+    const v = pickVoice();
+    if(v) u.voice = v;
+    u.lang = v ? v.lang : (lang==='id' ? 'id-ID' : 'en-US');
+    u.rate = 1.0; u.pitch = 0.92;        // flatter than the storytelling voice
+    sayBusy = true;
+    u.onend = ()=>{ sayBusy = false; };
+    u.onerror = ()=>{ sayBusy = false; };
+    if(force){
+      // same rule as the panel narration: Safari drops a speak() issued in the
+      // same tick as a cancel(), so let the cancel land first
+      synth.cancel();
+      setTimeout(()=>{ try{ synth.resume(); synth.speak(u); }catch(e){ sayBusy = false; } }, 90);
+    } else {
+      synth.resume(); synth.speak(u);
+    }
+    return true;
+  }catch(e){ sayBusy = false; return false; }
+}
+/* Returns whether the line actually went out — a caller that latches state on
+   a callout must not latch when the line was dropped, or it is lost for good. */
+function sayOnce(kind, text, gapMs, force){
+  const now = performance.now();
+  if(sayLast[kind] && now - sayLast[kind] < gapMs) return false;
+  const spoke = sayComputer(text, force);
+  if(spoke) sayLast[kind] = now;
+  return spoke;
+}
+
+function syncCockpitLang(){
+  el('ckSpdLab').textContent = t('ckSpd');
+  el('ckTgtLab').textContent = t('ckTgt');
+  el('thrLab').textContent = t('ckThr');
+  el('ckExit').textContent = t('ckExit');
+  el('ckData').textContent = t('ckData');
+  el('ckVoice').title = t('ckVoice');
+  el('pilotBtn').title = t('pilot');
+  el('ckHint').textContent = isTouch ? t('ckHintTouch') : t('ckHintDesk');
+}
+
+function setThrottle(v){
+  const was = throttle;
+  throttle = Math.max(0, Math.min(1, v));
+  // snap at both ends: a child's finger never lands exactly on the stops,
+  // and "99%" instead of full thrust is a frustrating way to lose a race
+  if(throttle > 0.96) throttle = 1;
+  else if(throttle < 0.04) throttle = 0;
+  el('thrFill').style.height = (throttle*100).toFixed(1) + '%';
+  el('thrGrip').style.bottom = `calc(2px + ${throttle.toFixed(3)} * (100% - 16px))`;
+  el('thrVal').textContent = Math.round(throttle*100) + '%';
+  if(!pilot) return;
+  if(throttle > 0.995 && was <= 0.995) sayOnce('full', t('sayFull'), 12000);
+  if(throttle < 0.005 && was >= 0.005) sayOnce('idle', t('sayIdle'), 12000);
+}
+
+function warn(text){
+  el('ckWarn').textContent = text;
+  el('ckWarn').classList.add('on');
+  warnUntil = performance.now() + 1600;
+}
+
+function enterPilot(){
+  if(pilot) return;
+  pilot = true;
+  stopSpeak(); closePanel();
+  flight = null; followObj = null;
+  controls.enabled = false;
+  preDaysPerSec = daysPerSec;
+  if(daysPerSec > PILOT_DAYS_PER_SEC) daysPerSec = PILOT_DAYS_PER_SEC;
+  setThrottle(0);
+  shipVel.set(0,0,0);
+  stickIn.x = stickIn.y = dragIn.x = dragIn.y = keyIn.x = keyIn.y = 0;
+  braking = false;
+  nearKey = arrivedKey = null;
+  realSpeed = 0;
+  // take over facing whatever the user was already looking at
+  mTmp.lookAt(camera.position, controls.target, UP_Y);
+  shipQuat.setFromRotationMatrix(mTmp);
+  camera.up.set(0,1,0);
+  realPos(camera.position, vRealPrev);
+
+  el('cockpit').classList.add('open');
+  el('pilotBtn').classList.add('on');
+  el('nav').style.display = 'none';
+  el('hud').style.display = 'none';
+  // the map's own chrome would sit right under the cockpit readouts, and none
+  // of it is reachable while flying anyway — the cockpit has its own exit
+  el('top').style.display = 'none';
+  el('hint').classList.add('hide');
+  tip.classList.remove('on');
+  el('ckData').classList.add('hide');
+  el('ckWarn').classList.remove('on');
+  el('ckHint').classList.remove('hide');
+  setTimeout(()=>{ if(pilot) el('ckHint').classList.add('hide'); }, 12000);
+  syncCockpitLang();
+  sayComputer(t('sayStart'), true);
+}
+
+function exitPilot(openKey){
+  if(!pilot) return;
+  pilot = false;
+  el('cockpit').classList.remove('open');
+  el('pilotBtn').classList.remove('on');
+  el('nav').style.display = '';
+  el('hud').style.display = '';
+  el('top').style.display = '';
+  el('ckWarn').classList.remove('on');
+  if(preDaysPerSec !== null){ daysPerSec = preDaysPerSec; preDaysPerSec = null; updateSpeedLabel(); }
+  // hand a sane orbit centre back to OrbitControls: a point ahead of the ship
+  shipFwd.set(0,0,-1).applyQuaternion(camera.quaternion);
+  controls.target.copy(camera.position).addScaledVector(shipFwd, 26);
+  camera.up.set(0,1,0);
+  controls.enabled = true;
+  controls.update();
+  syncHudHeight();
+  if(openKey) openPanel(openKey, true);
+  else { try{ synth.cancel(); }catch(e){} sayBusy = false; sayComputer(t('sayExit'), true); }
+}
+
+function updateShip(dt){
+  const ix = Math.max(-1, Math.min(1, keyIn.x + stickIn.x + dragIn.x));
+  const iy = Math.max(-1, Math.min(1, keyIn.y + stickIn.y + dragIn.y));
+
+  qTmp.setFromAxisAngle(AXIS_Y, -ix * YAW_RATE * dt);   shipQuat.multiply(qTmp);
+  qTmp.setFromAxisAngle(AXIS_X, -iy * PITCH_RATE * dt); shipQuat.multiply(qTmp);
+
+  // bleed off accumulated roll, so the ship never ends up flying upside down
+  shipFwd.set(0,0,-1).applyQuaternion(shipQuat);
+  vTmpA.copy(UP_Y).addScaledVector(shipFwd, -UP_Y.dot(shipFwd));
+  if(vTmpA.lengthSq() > 1e-5){
+    vTmpA.normalize();
+    mTmp.lookAt(ORIGIN, shipFwd, vTmpA);
+    qTmp.setFromRotationMatrix(mTmp);
+    shipQuat.slerp(qTmp, 1 - Math.exp(-1.8*dt));
+  }
+  shipQuat.normalize();
+
+  shipFwd.set(0,0,-1).applyQuaternion(shipQuat);
+  vTmpB.copy(shipFwd).multiplyScalar(throttle*throttle*SHIP_MAX);
+  shipVel.lerp(vTmpB, 1 - Math.exp(-1.5*dt));
+  if(braking) shipVel.multiplyScalar(Math.exp(-3.4*dt));
+
+  camera.position.addScaledVector(shipVel, dt);
+  camera.quaternion.copy(shipQuat);
+
+  /* nearest body — drives the readout, the callouts and the collision check */
+  let best = null, bestSurf = Infinity;
+  for(const b of bodies){
+    (b.holder || sun).getWorldPosition(vTmpA);
+    const dist = camera.position.distanceTo(vTmpA);
+    const surf = dist - b.dispR;
+    if(surf < bestSurf){ bestSurf = surf; best = b; }
+  }
+
+  // the Sun is the one place a child can actually get into trouble, and that
+  // warning outranks the cheerful "we have arrived" line for the same body
+  // set wider than the arrival band (1.7 × radius) so the warning always wins
+  // the race against a cheery "we have arrived at the Sun"
+  const sunHot = camera.position.length() < S.sunR*3.0;
+  if(sunHot){
+    warn(t('ckWarnHot'));
+    sayOnce('hot', t('sayHot'), 9000);
+  }
+
+  if(best){
+    (best.holder || sun).getWorldPosition(vTmpA);
+    const minR = best.dispR * 1.06;
+    const dist = camera.position.distanceTo(vTmpA);
+    if(dist < minR){
+      vTmpB.copy(camera.position).sub(vTmpA);
+      if(vTmpB.lengthSq() < 1e-6) vTmpB.set(0, 0, 1);
+      vTmpB.normalize();
+      camera.position.copy(vTmpA).addScaledVector(vTmpB, minR);
+      const into = shipVel.dot(vTmpB);
+      if(into < 0) shipVel.addScaledVector(vTmpB, -into*1.7);   // bounce back out
+      warn(t('ckWarnHit'));
+      sayOnce('hit', t('sayHit'), 4000);
+    }
+
+    const key = best.data.key;
+    if(bestSurf < best.dispR*1.7){
+      if(arrivedKey !== key){
+        arrivedKey = key;
+        el('ckData').classList.remove('hide');
+        if(!sunHot) sayOnce('arrive:'+key, t('sayArrive').replace('{name}', best.data.name[lang]), 8000, true);
+      }
+    } else if(bestSurf > best.dispR*3.2 && arrivedKey === key){
+      arrivedKey = null;
+      el('ckData').classList.add('hide');
+    }
+    if(bestSurf < best.dispR*7 && nearKey !== key && arrivedKey !== key){
+      // latch only once the line is actually out, so a callout that lost the
+      // race with the engine-start greeting is retried instead of swallowed
+      if(sayOnce('near:'+key, t('sayNear').replace('{name}', best.data.name[lang]), 8000)) nearKey = key;
+    } else if(bestSurf > best.dispR*11 && nearKey === key){
+      nearKey = null;
+    }
+  }
+
+  // real distance & speed, recovered from the compressed map
+  realPos(camera.position, vReal);
+  const stepMkm = vReal.distanceTo(vRealPrev) * AU_MKM;
+  vRealPrev.copy(vReal);
+  const inst = dt > 0 ? stepMkm/dt : 0;
+  realSpeed += (inst - realSpeed) * (1 - Math.exp(-4*dt));
+
+  hudClock += dt;
+  if(hudClock >= 0.1){
+    hudClock = 0;
+    el('ckSpdVal').textContent = fmt(realSpeed, realSpeed<10 ? 1 : 0) + ' ' + t('ckUnit');
+    el('ckSpdSub').textContent = realSpeed > 0.05
+      ? fmt(realSpeed/C_MKMS, realSpeed/C_MKMS<10 ? 1 : 0) + ' ' + t('ckLight') : '';
+    if(best){
+      (best.holder || sun).getWorldPosition(vTmpA);
+      realPos(vTmpA, vRealB);
+      el('ckTgtName').textContent = best.data.name[lang];
+      el('ckTgtDist').textContent = fmt(vReal.distanceTo(vRealB)*AU_MKM, 1) + ' ' + t('ckDistUnit');
+    }
+  }
+  if(warnUntil && performance.now() > warnUntil){
+    warnUntil = 0;
+    el('ckWarn').classList.remove('on');
+  }
+}
+
+/* ---- cockpit input ---- */
+const stickPad = el('stickPad'), stickKnob = el('stickKnob');
+let stickId = null;
+function moveStick(e){
+  const r = stickPad.getBoundingClientRect();
+  let x = (e.clientX - (r.left + r.width/2)) / (r.width/2);
+  let y = (e.clientY - (r.top + r.height/2)) / (r.height/2);
+  const m = Math.hypot(x, y);
+  if(m > 1){ x /= m; y /= m; }
+  stickIn.x = x; stickIn.y = y;
+  stickKnob.style.transform = `translate(${(x*r.width*0.29).toFixed(1)}px,${(y*r.height*0.29).toFixed(1)}px)`;
+}
+function endStick(e){
+  if(stickId !== null && e.pointerId !== stickId) return;
+  stickId = null; stickIn.x = stickIn.y = 0;
+  stickPad.classList.remove('grab');
+  stickKnob.style.transform = '';
+}
+stickPad.addEventListener('pointerdown', e=>{
+  stickId = e.pointerId; stickPad.setPointerCapture(e.pointerId);
+  stickPad.classList.add('grab'); moveStick(e); e.preventDefault();
+});
+stickPad.addEventListener('pointermove', e=>{ if(e.pointerId === stickId) moveStick(e); });
+stickPad.addEventListener('pointerup', endStick);
+stickPad.addEventListener('pointercancel', endStick);
+
+const thrBar = el('thrBar');
+let thrId = null;
+function moveThr(e){
+  const r = thrBar.getBoundingClientRect();
+  setThrottle(1 - (e.clientY - r.top)/r.height);
+}
+thrBar.addEventListener('pointerdown', e=>{
+  thrId = e.pointerId; thrBar.setPointerCapture(e.pointerId); moveThr(e); e.preventDefault();
+});
+thrBar.addEventListener('pointermove', e=>{ if(e.pointerId === thrId) moveThr(e); });
+thrBar.addEventListener('pointerup', e=>{ if(e.pointerId === thrId) thrId = null; });
+thrBar.addEventListener('pointercancel', ()=>{ thrId = null; });
+
+renderer.domElement.addEventListener('wheel', e=>{
+  if(!pilot) return;
+  e.preventDefault();
+  setThrottle(throttle - Math.sign(e.deltaY)*0.06);
+}, {passive:false});
+
+const STEER_KEYS = {
+  ArrowLeft:['x',-1], KeyA:['x',-1], ArrowRight:['x',1],  KeyD:['x',1],
+  ArrowUp:  ['y',-1], KeyW:['y',-1], ArrowDown:['y',1],   KeyS:['y',1]
+};
+function steerKey(code, down){
+  const m = STEER_KEYS[code];
+  if(!m) return false;
+  keyIn[m[0]] = down ? m[1] : (keyIn[m[0]] === m[1] ? 0 : keyIn[m[0]]);
+  return true;
+}
+addEventListener('keyup', e=>{
+  if(!pilot) return;
+  if(steerKey(e.code, false)) e.preventDefault();
+  if(e.code === 'Space') braking = false;
+});
+addEventListener('blur', ()=>{ keyIn.x = keyIn.y = 0; braking = false; });
+
+el('pilotBtn').onclick = ()=>{ pilot ? exitPilot() : enterPilot(); };
+el('ckExit').onclick = ()=> exitPilot();
+el('ckData').onclick = ()=> exitPilot(arrivedKey);
+el('ckVoice').onclick = ()=>{
+  ckVoiceOn = !ckVoiceOn;
+  el('ckVoice').classList.toggle('on', ckVoiceOn);
+  if(!ckVoiceOn){ try{ synth.cancel(); }catch(e){} sayBusy = false; }
+};
+setThrottle(0);
 
 /* ================= layout ================= */
 /* The planet chips must sit right above the control card, never behind it.
@@ -944,8 +1322,10 @@ function animate(){
   // asteroid belt (differential rotation, per Kepler's law)
   if(!paused) for(const b of beltBands) b.g.rotation.y += b.rate*daysPerSec*dt*0.9;
 
-  // camera flight
-  if(flight){
+  // camera: either the child is flying it, or it is on rails
+  if(pilot){
+    updateShip(dt);
+  } else if(flight){
     flight.t += dt/flight.dur;
     const k = easeIO(Math.min(1, flight.t));
     // moving target? follow its current position
@@ -969,7 +1349,7 @@ function animate(){
     controls.target.copy(vpos);
   }
 
-  controls.update();
+  if(!pilot) controls.update();
 
   // sync the camera matrices BEFORE projecting the labels,
   // so labels never lag one frame behind the rendered image
@@ -1015,7 +1395,10 @@ window.__dbg = () => ({
   cam: camera.position.toArray().map(v=>+v.toFixed(1)),
   tgt: controls.target.toArray().map(v=>+v.toFixed(1)),
   dist: +camera.position.distanceTo(controls.target).toFixed(2),
-  follow: followObj, flying: !!flight
+  follow: followObj, flying: !!flight,
+  pilot, throttle: +throttle.toFixed(2),
+  fwd: new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3)),
+  up: new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion).toArray().map(v=>+v.toFixed(3))
 });
 
 applyLang();
