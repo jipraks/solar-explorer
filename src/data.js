@@ -1,10 +1,10 @@
 /* ============================================================
-   DATA · Tata Surya / Solar System
-   Angka astronomi: NASA Planetary Fact Sheet + IAU MPC (2026)
+   DATA · Solar System
+   Astronomical figures: NASA Planetary Fact Sheet + IAU MPC (2026)
    ============================================================ */
-const S = {                       // konstanta skala tampilan (edukatif, dikompres)
-  sizeBase: 1.40, sizeExp: 0.42,  // radius tampil = sizeBase * (R/R_bumi)^sizeExp
-  orbBase: 18, orbK: 30, orbExp: 0.55, // jarak tampil = orbBase + orbK * AU^orbExp
+const S = {                       // display scale constants (educational, compressed)
+  sizeBase: 1.40, sizeExp: 0.42,  // display radius = sizeBase * (R/R_earth)^sizeExp
+  orbBase: 18, orbK: 30, orbExp: 0.55, // display distance = orbBase + orbK * AU^orbExp
   sunR: 9.0
 };
 const rDisp = km => S.sizeBase * Math.pow(km / 6371, S.sizeExp);
@@ -34,7 +34,9 @@ const UI = {
     h3t: "Ketuk planet", h3d: "Ketuk bola planet atau tombol namanya di bawah untuk membuka info detail dan terbang ke sana.",
     h4t: "Atur waktu", h4d: "Geser slider untuk mempercepat atau memperlambat orbit. Tekan tombol jeda untuk membekukan tata surya.",
     h5t: "Catatan skala", h5d: "Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar. Kalau digambar sesuai skala asli, Bumi hanya sebesar titik dan Neptunus berada 100 layar jauhnya.",
-    close: "Mengerti, ayo mulai",
+    close: "Mengerti, ayo mulai", closeShort: "Tutup",
+    creditsTitle: "Kredit & sumber data", creditsSub: "Dari mana angka dan gambarnya berasal.",
+    creditsNote: "Dibuat untuk edukasi dan tidak berafiliasi dengan NASA maupun IAU. Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar.",
     scaleNote: "Skala edukatif — jarak & ukuran dikompres agar mudah dilihat.",
     moonNote: "Jumlah bulan terus bertambah seiring penemuan baru (data IAU 2026)."
   },
@@ -61,11 +63,43 @@ const UI = {
     h3t: "Tap a planet", h3d: "Tap the planet itself or its name button below to open the detail panel and fly there.",
     h4t: "Control time", h4d: "Slide to speed up or slow down the orbits. Hit pause to freeze the whole solar system.",
     h5t: "About the scale", h5d: "Distances and sizes are deliberately compressed so every planet fits on one screen. At true scale Earth would be a single pixel and Neptune would sit 100 screens away.",
-    close: "Got it, let's go",
+    close: "Got it, let's go", closeShort: "Close",
+    creditsTitle: "Credits & data sources", creditsSub: "Where the numbers and the imagery come from.",
+    creditsNote: "Built for education and not affiliated with NASA or the IAU. Distances and sizes are deliberately compressed so every planet fits on one screen.",
     scaleNote: "Educational scale — distances & sizes are compressed for visibility.",
     moonNote: "Moon counts keep rising as new discoveries are confirmed (IAU, 2026)."
   }
 };
+
+/* Credits — mirrors the "Data sources" section of the README. */
+const CREDITS = [
+  {ic:"🛰️",
+   t:{id:"Angka planet", en:"Planet figures"},
+   d:{id:"Diameter, jarak, periode orbit & rotasi, gravitasi, dan suhu rata-rata.",
+      en:"Diameters, distances, orbital & rotation periods, gravity, and average temperatures."},
+   links:[{label:"NASA Planetary Fact Sheet", url:"https://nssdc.gsfc.nasa.gov/planetary/factsheet/"}]},
+  {ic:"🌙",
+   t:{id:"Jumlah bulan", en:"Moon counts"},
+   d:{id:"Data Maret 2026 — Jupiter 101, Saturnus 285. Angkanya terus bertambah.",
+      en:"As of March 2026 — Jupiter 101, Saturn 285. The numbers keep rising."},
+   links:[{label:"IAU Minor Planet Center", url:"https://www.iau.org/"}]},
+  {ic:"🖼️",
+   t:{id:"Tekstur planet", en:"Planet textures"},
+   d:{id:"Disusun dari citra NASA, dimuat saat aplikasi berjalan dan tunduk pada lisensinya masing-masing.",
+      en:"Assembled from NASA imagery, loaded at runtime and subject to their own licences."},
+   links:[{label:"threex.planets — Jerome Etienne (MIT)", url:"https://github.com/jeromeetienne/threex.planets"},
+          {label:"Planet Pixel Emporium — James Hastings-Trew", url:"https://planetpixelemporium.com/"}]},
+  {ic:"🧊",
+   t:{id:"Mesin 3D", en:"3D engine"},
+   d:{id:"Seluruh adegan digambar dengan WebGL lewat Three.js r180.",
+      en:"The whole scene is drawn with WebGL through Three.js r180."},
+   links:[{label:"Three.js", url:"https://threejs.org/"}]},
+  {ic:"📄",
+   t:{id:"Kode sumber", en:"Source code"},
+   d:{id:"Terbuka dengan lisensi MIT — bebas dipakai dan diubah untuk kelas atau pameran.",
+      en:"Open under the MIT licence — free to use and adapt for classrooms or exhibits."},
+   links:[{label:"github.com/jipraks/solar-explorer", url:"https://github.com/jipraks/solar-explorer"}]}
+];
 
 const TEX = "https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/";
 

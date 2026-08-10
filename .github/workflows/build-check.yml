@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: index.html sinkron dengan src/
+      - name: index.html is in sync with src/
         run: python3 build.py --check

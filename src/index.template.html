@@ -17,6 +17,7 @@
     --accent2:#ffd479;
     --safe-t:env(safe-area-inset-top,0px);
     --safe-b:env(safe-area-inset-bottom,0px);
+    --hud-h:104px;               /* height of the bottom control card, re-measured by app.js */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
@@ -59,7 +60,8 @@
   .iconbtn.on svg{stroke:var(--accent)}
 
   /* ---------- Planet nav ---------- */
-  #nav{position:fixed;z-index:28;left:0;right:0;bottom:calc(96px + var(--safe-b));
+  /* 12px = #hud offset from the bottom, 8px = gap between the chips and the card */
+  #nav{position:fixed;z-index:28;left:0;right:0;bottom:calc(var(--hud-h) + 20px + var(--safe-b));
     display:flex;gap:7px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;
     -webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
   #nav::-webkit-scrollbar{display:none}
@@ -148,20 +150,47 @@
     padding:6px 14px;border-radius:999px;backdrop-filter:blur(14px);transition:opacity .5s;pointer-events:none;text-align:center}
   #hint.hide{opacity:0}
 
-  /* ---------- Help sheet ---------- */
-  #help{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;
+  /* ---------- Help & credits sheets ---------- */
+  #help,#credits{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;
     background:rgba(3,4,12,.72);backdrop-filter:blur(8px)}
-  #help.open{display:flex}
-  #helpCard{width:100%;max-width:420px;max-height:82vh;overflow-y:auto;background:var(--glass2);
-    border:1px solid var(--line);border-radius:20px;padding:22px}
-  #helpCard h3{margin:0 0 4px;font-size:19px}
-  #helpCard .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  #help.open,#credits.open{display:flex}
+  #helpCard,#creditsCard{width:100%;max-width:420px;max-height:82vh;overflow-y:auto;background:var(--glass2);
+    border:1px solid var(--line);border-radius:20px;padding:22px;overscroll-behavior:contain;touch-action:pan-y}
+  #helpCard h3,#creditsCard h3{margin:0 0 4px;font-size:19px}
+  #helpCard .sub,#creditsCard .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
   .hrow{display:flex;gap:12px;margin-bottom:13px;font-size:13.5px;line-height:1.5}
   .hrow i{flex:0 0 26px;font-style:normal;font-size:17px;text-align:center}
   .hrow b{display:block;font-weight:600;font-size:13.5px}
   .hrow span{color:var(--muted);font-size:12.5px}
-  #helpClose{width:100%;margin-top:8px;padding:12px;border-radius:12px;background:rgba(124,196,255,.16);
+  .crow{margin-bottom:16px}
+  .crow span{display:block;margin-bottom:5px}
+  .crow a{display:block;width:fit-content;max-width:100%;margin-top:3px;font-size:12px;color:var(--accent);
+    text-decoration:none;border-bottom:1px solid rgba(124,196,255,.35);padding-bottom:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crow a:hover{border-bottom-color:var(--accent)}
+  #crNote{margin:4px 0 14px;font-size:11.5px;line-height:1.55;color:#8b97b8;
+    border-top:1px solid var(--line);padding-top:14px}
+  #helpClose,#creditsClose{width:100%;margin-top:8px;padding:12px;border-radius:12px;background:rgba(124,196,255,.16);
     border:1px solid rgba(124,196,255,.36);color:var(--accent);font-weight:650;font-size:13px}
+
+  /* ---------- Language gate (first-launch language choice) ---------- */
+  #langGate{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:22px;
+    background:radial-gradient(circle at 50% 40%,rgba(19,26,53,.96),rgba(5,6,15,.985))}
+  #langGate.open{display:flex}
+  #langCard{width:100%;max-width:376px;max-height:88vh;overflow-y:auto;text-align:center;
+    background:var(--glass2);border:1px solid var(--line);overscroll-behavior:contain;touch-action:pan-y;
+    border-radius:22px;padding:26px 20px 20px;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+  #langCard .lgIco{font-size:34px;line-height:1}
+  #langCard h3{margin:12px 0 6px;font-size:18.5px;font-weight:660}
+  #langCard p{margin:0 0 18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+  .lgBtn{width:100%;margin-top:9px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);
+    background:rgba(255,255,255,.045);display:flex;align-items:center;gap:12px;text-align:left;transition:.2s}
+  .lgBtn:hover{border-color:rgba(124,196,255,.45);background:rgba(124,196,255,.12)}
+  .lgBtn:active{transform:scale(.98)}
+  .lgBtn i{flex:0 0 auto;font-style:normal;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--accent);
+    background:rgba(124,196,255,.16);border:1px solid rgba(124,196,255,.34);border-radius:9px;padding:6px 9px}
+  .lgBtn b{display:block;font-size:14.5px;font-weight:620}
+  .lgBtn em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);margin-top:1px}
 
   @media (max-width:640px){
     #panel{left:0;right:0;top:auto;bottom:0;width:100%;height:62vh;border-left:0;border-top:1px solid var(--line);
@@ -202,6 +231,9 @@
   <button class="iconbtn" id="helpBtn" aria-label="help">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.9 2.9 0 015.5 1.2c0 2-2.7 2.4-2.7 4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></svg>
   </button>
+  <button class="iconbtn" id="creditsBtn" aria-label="credits">
+    <svg viewBox="0 0 24 24"><path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5"/><path d="M9.2 12.5h5.6M9.2 16h3.8"/></svg>
+  </button>
   <button class="iconbtn" id="homeBtn" aria-label="reset">
     <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
   </button>
@@ -237,6 +269,18 @@
 </div>
 
 <div id="help"><div id="helpCard"></div></div>
+<div id="credits"><div id="creditsCard"></div></div>
+
+<div id="langGate">
+  <div id="langCard">
+    <div class="lgIco">🪐</div>
+    <h3>Pilih bahasa · Choose language</h3>
+    <p>Bisa diganti kapan saja lewat tombol ID / EN di pojok kanan atas.<br>
+       You can switch any time with the ID / EN buttons at the top right.</p>
+    <button class="lgBtn" data-l="id"><i>ID</i><span><b>Bahasa Indonesia</b><em>Lanjutkan dalam Bahasa Indonesia</em></span></button>
+    <button class="lgBtn" data-l="en"><i>EN</i><span><b>English</b><em>Continue in English</em></span></button>
+  </div>
+</div>
 
 <script type="importmap">
 {"imports":{
@@ -249,8 +293,8 @@
 <!--APP-->
 
 <script>
-/* Jika pustaka 3D gagal dimuat (mis. tanpa koneksi internet), beri tahu pengguna
-   alih-alih membiarkan layar pemuatan berputar selamanya. */
+/* If the 3D library fails to load (e.g. no internet connection), tell the user
+   instead of leaving the loading screen spinning forever. */
 setTimeout(function(){
   if(window.__dbg) return;
   var l = document.getElementById('loader');

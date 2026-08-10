@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Build script — menggabungkan src/ menjadi satu file index.html mandiri.
 Build script — inlines everything in src/ into a single standalone index.html.
 
-    python3 build.py            # tulis index.html / write index.html
-    python3 build.py --check    # gagal bila index.html tidak sinkron / fail if out of sync
+    python3 build.py            # write index.html
+    python3 build.py --check    # fail if index.html is out of sync with src/
 """
 import pathlib
 import sys

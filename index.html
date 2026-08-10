@@ -17,6 +17,7 @@
     --accent2:#ffd479;
     --safe-t:env(safe-area-inset-top,0px);
     --safe-b:env(safe-area-inset-bottom,0px);
+    --hud-h:104px;               /* height of the bottom control card, re-measured by app.js */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
@@ -59,7 +60,8 @@
   .iconbtn.on svg{stroke:var(--accent)}
 
   /* ---------- Planet nav ---------- */
-  #nav{position:fixed;z-index:28;left:0;right:0;bottom:calc(96px + var(--safe-b));
+  /* 12px = #hud offset from the bottom, 8px = gap between the chips and the card */
+  #nav{position:fixed;z-index:28;left:0;right:0;bottom:calc(var(--hud-h) + 20px + var(--safe-b));
     display:flex;gap:7px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;
     -webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
   #nav::-webkit-scrollbar{display:none}
@@ -148,20 +150,47 @@
     padding:6px 14px;border-radius:999px;backdrop-filter:blur(14px);transition:opacity .5s;pointer-events:none;text-align:center}
   #hint.hide{opacity:0}
 
-  /* ---------- Help sheet ---------- */
-  #help{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;
+  /* ---------- Help & credits sheets ---------- */
+  #help,#credits{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;
     background:rgba(3,4,12,.72);backdrop-filter:blur(8px)}
-  #help.open{display:flex}
-  #helpCard{width:100%;max-width:420px;max-height:82vh;overflow-y:auto;background:var(--glass2);
-    border:1px solid var(--line);border-radius:20px;padding:22px}
-  #helpCard h3{margin:0 0 4px;font-size:19px}
-  #helpCard .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+  #help.open,#credits.open{display:flex}
+  #helpCard,#creditsCard{width:100%;max-width:420px;max-height:82vh;overflow-y:auto;background:var(--glass2);
+    border:1px solid var(--line);border-radius:20px;padding:22px;overscroll-behavior:contain;touch-action:pan-y}
+  #helpCard h3,#creditsCard h3{margin:0 0 4px;font-size:19px}
+  #helpCard .sub,#creditsCard .sub{font-size:12px;color:var(--muted);margin-bottom:16px}
   .hrow{display:flex;gap:12px;margin-bottom:13px;font-size:13.5px;line-height:1.5}
   .hrow i{flex:0 0 26px;font-style:normal;font-size:17px;text-align:center}
   .hrow b{display:block;font-weight:600;font-size:13.5px}
   .hrow span{color:var(--muted);font-size:12.5px}
-  #helpClose{width:100%;margin-top:8px;padding:12px;border-radius:12px;background:rgba(124,196,255,.16);
+  .crow{margin-bottom:16px}
+  .crow span{display:block;margin-bottom:5px}
+  .crow a{display:block;width:fit-content;max-width:100%;margin-top:3px;font-size:12px;color:var(--accent);
+    text-decoration:none;border-bottom:1px solid rgba(124,196,255,.35);padding-bottom:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crow a:hover{border-bottom-color:var(--accent)}
+  #crNote{margin:4px 0 14px;font-size:11.5px;line-height:1.55;color:#8b97b8;
+    border-top:1px solid var(--line);padding-top:14px}
+  #helpClose,#creditsClose{width:100%;margin-top:8px;padding:12px;border-radius:12px;background:rgba(124,196,255,.16);
     border:1px solid rgba(124,196,255,.36);color:var(--accent);font-weight:650;font-size:13px}
+
+  /* ---------- Language gate (first-launch language choice) ---------- */
+  #langGate{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:22px;
+    background:radial-gradient(circle at 50% 40%,rgba(19,26,53,.96),rgba(5,6,15,.985))}
+  #langGate.open{display:flex}
+  #langCard{width:100%;max-width:376px;max-height:88vh;overflow-y:auto;text-align:center;
+    background:var(--glass2);border:1px solid var(--line);overscroll-behavior:contain;touch-action:pan-y;
+    border-radius:22px;padding:26px 20px 20px;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+  #langCard .lgIco{font-size:34px;line-height:1}
+  #langCard h3{margin:12px 0 6px;font-size:18.5px;font-weight:660}
+  #langCard p{margin:0 0 18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+  .lgBtn{width:100%;margin-top:9px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);
+    background:rgba(255,255,255,.045);display:flex;align-items:center;gap:12px;text-align:left;transition:.2s}
+  .lgBtn:hover{border-color:rgba(124,196,255,.45);background:rgba(124,196,255,.12)}
+  .lgBtn:active{transform:scale(.98)}
+  .lgBtn i{flex:0 0 auto;font-style:normal;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--accent);
+    background:rgba(124,196,255,.16);border:1px solid rgba(124,196,255,.34);border-radius:9px;padding:6px 9px}
+  .lgBtn b{display:block;font-size:14.5px;font-weight:620}
+  .lgBtn em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);margin-top:1px}
 
   @media (max-width:640px){
     #panel{left:0;right:0;top:auto;bottom:0;width:100%;height:62vh;border-left:0;border-top:1px solid var(--line);
@@ -202,6 +231,9 @@
   <button class="iconbtn" id="helpBtn" aria-label="help">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.9 2.9 0 015.5 1.2c0 2-2.7 2.4-2.7 4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></svg>
   </button>
+  <button class="iconbtn" id="creditsBtn" aria-label="credits">
+    <svg viewBox="0 0 24 24"><path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5"/><path d="M9.2 12.5h5.6M9.2 16h3.8"/></svg>
+  </button>
   <button class="iconbtn" id="homeBtn" aria-label="reset">
     <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
   </button>
@@ -237,6 +269,18 @@
 </div>
 
 <div id="help"><div id="helpCard"></div></div>
+<div id="credits"><div id="creditsCard"></div></div>
+
+<div id="langGate">
+  <div id="langCard">
+    <div class="lgIco">🪐</div>
+    <h3>Pilih bahasa · Choose language</h3>
+    <p>Bisa diganti kapan saja lewat tombol ID / EN di pojok kanan atas.<br>
+       You can switch any time with the ID / EN buttons at the top right.</p>
+    <button class="lgBtn" data-l="id"><i>ID</i><span><b>Bahasa Indonesia</b><em>Lanjutkan dalam Bahasa Indonesia</em></span></button>
+    <button class="lgBtn" data-l="en"><i>EN</i><span><b>English</b><em>Continue in English</em></span></button>
+  </div>
+</div>
 
 <script type="importmap">
 {"imports":{
@@ -247,12 +291,12 @@
 
 <script>
 /* ============================================================
-   DATA · Tata Surya / Solar System
-   Angka astronomi: NASA Planetary Fact Sheet + IAU MPC (2026)
+   DATA · Solar System
+   Astronomical figures: NASA Planetary Fact Sheet + IAU MPC (2026)
    ============================================================ */
-const S = {                       // konstanta skala tampilan (edukatif, dikompres)
-  sizeBase: 1.40, sizeExp: 0.42,  // radius tampil = sizeBase * (R/R_bumi)^sizeExp
-  orbBase: 18, orbK: 30, orbExp: 0.55, // jarak tampil = orbBase + orbK * AU^orbExp
+const S = {                       // display scale constants (educational, compressed)
+  sizeBase: 1.40, sizeExp: 0.42,  // display radius = sizeBase * (R/R_earth)^sizeExp
+  orbBase: 18, orbK: 30, orbExp: 0.55, // display distance = orbBase + orbK * AU^orbExp
   sunR: 9.0
 };
 const rDisp = km => S.sizeBase * Math.pow(km / 6371, S.sizeExp);
@@ -282,7 +326,9 @@ const UI = {
     h3t: "Ketuk planet", h3d: "Ketuk bola planet atau tombol namanya di bawah untuk membuka info detail dan terbang ke sana.",
     h4t: "Atur waktu", h4d: "Geser slider untuk mempercepat atau memperlambat orbit. Tekan tombol jeda untuk membekukan tata surya.",
     h5t: "Catatan skala", h5d: "Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar. Kalau digambar sesuai skala asli, Bumi hanya sebesar titik dan Neptunus berada 100 layar jauhnya.",
-    close: "Mengerti, ayo mulai",
+    close: "Mengerti, ayo mulai", closeShort: "Tutup",
+    creditsTitle: "Kredit & sumber data", creditsSub: "Dari mana angka dan gambarnya berasal.",
+    creditsNote: "Dibuat untuk edukasi dan tidak berafiliasi dengan NASA maupun IAU. Jarak dan ukuran sengaja dikompres agar semua planet muat di satu layar.",
     scaleNote: "Skala edukatif — jarak & ukuran dikompres agar mudah dilihat.",
     moonNote: "Jumlah bulan terus bertambah seiring penemuan baru (data IAU 2026)."
   },
@@ -309,11 +355,43 @@ const UI = {
     h3t: "Tap a planet", h3d: "Tap the planet itself or its name button below to open the detail panel and fly there.",
     h4t: "Control time", h4d: "Slide to speed up or slow down the orbits. Hit pause to freeze the whole solar system.",
     h5t: "About the scale", h5d: "Distances and sizes are deliberately compressed so every planet fits on one screen. At true scale Earth would be a single pixel and Neptune would sit 100 screens away.",
-    close: "Got it, let's go",
+    close: "Got it, let's go", closeShort: "Close",
+    creditsTitle: "Credits & data sources", creditsSub: "Where the numbers and the imagery come from.",
+    creditsNote: "Built for education and not affiliated with NASA or the IAU. Distances and sizes are deliberately compressed so every planet fits on one screen.",
     scaleNote: "Educational scale — distances & sizes are compressed for visibility.",
     moonNote: "Moon counts keep rising as new discoveries are confirmed (IAU, 2026)."
   }
 };
+
+/* Credits — mirrors the "Data sources" section of the README. */
+const CREDITS = [
+  {ic:"🛰️",
+   t:{id:"Angka planet", en:"Planet figures"},
+   d:{id:"Diameter, jarak, periode orbit & rotasi, gravitasi, dan suhu rata-rata.",
+      en:"Diameters, distances, orbital & rotation periods, gravity, and average temperatures."},
+   links:[{label:"NASA Planetary Fact Sheet", url:"https://nssdc.gsfc.nasa.gov/planetary/factsheet/"}]},
+  {ic:"🌙",
+   t:{id:"Jumlah bulan", en:"Moon counts"},
+   d:{id:"Data Maret 2026 — Jupiter 101, Saturnus 285. Angkanya terus bertambah.",
+      en:"As of March 2026 — Jupiter 101, Saturn 285. The numbers keep rising."},
+   links:[{label:"IAU Minor Planet Center", url:"https://www.iau.org/"}]},
+  {ic:"🖼️",
+   t:{id:"Tekstur planet", en:"Planet textures"},
+   d:{id:"Disusun dari citra NASA, dimuat saat aplikasi berjalan dan tunduk pada lisensinya masing-masing.",
+      en:"Assembled from NASA imagery, loaded at runtime and subject to their own licences."},
+   links:[{label:"threex.planets — Jerome Etienne (MIT)", url:"https://github.com/jeromeetienne/threex.planets"},
+          {label:"Planet Pixel Emporium — James Hastings-Trew", url:"https://planetpixelemporium.com/"}]},
+  {ic:"🧊",
+   t:{id:"Mesin 3D", en:"3D engine"},
+   d:{id:"Seluruh adegan digambar dengan WebGL lewat Three.js r180.",
+      en:"The whole scene is drawn with WebGL through Three.js r180."},
+   links:[{label:"Three.js", url:"https://threejs.org/"}]},
+  {ic:"📄",
+   t:{id:"Kode sumber", en:"Source code"},
+   d:{id:"Terbuka dengan lisensi MIT — bebas dipakai dan diubah untuk kelas atau pameran.",
+      en:"Open under the MIT licence — free to use and adapt for classrooms or exhibits."},
+   links:[{label:"github.com/jipraks/solar-explorer", url:"https://github.com/jipraks/solar-explorer"}]}
+];
 
 const TEX = "https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/";
 
@@ -566,10 +644,16 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
 /* ================= state ================= */
-let lang = 'id';   // default Bahasa Indonesia; tombol ID/EN mengubahnya kapan saja
+const LANG_KEY = 'solar-explorer:lang';
+function storedLang(){
+  try{ const v = localStorage.getItem(LANG_KEY); return (v==='id'||v==='en') ? v : null; }
+  catch(e){ return null; }   // localStorage can be blocked (private mode / file://)
+}
+const savedLang = storedLang();
+let lang = savedLang || 'id';   // the ID/EN buttons can change it at any time
 const isTouch = matchMedia('(pointer:coarse)').matches;
 const isSmall = innerWidth < 641;
-let simDays = 0;            // waktu simulasi (hari)
+let simDays = 0;            // simulated time (days)
 let daysPerSec = 10;
 let paused = false;
 let focusKey = null;
@@ -608,7 +692,7 @@ controls.enablePan = true;
 controls.touches = {ONE:THREE.TOUCH.ROTATE, TWO:THREE.TOUCH.DOLLY_PAN};
 
 /* ================= lights ================= */
-const sunLight = new THREE.PointLight(0xfff2dc, 3.1, 0, 0); // decay 0 → planet luar tetap terlihat
+const sunLight = new THREE.PointLight(0xfff2dc, 3.1, 0, 0); // decay 0 → the outer planets stay lit
 scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x6f7fb0, 0.26));
 const rim = new THREE.DirectionalLight(0x8ea8ff, 0.14); rim.position.set(-1,0.6,-1); scene.add(rim);
@@ -631,7 +715,7 @@ function loadMap(url, mat, slot, srgb=true){
   }, undefined, ()=>{ loadDone++; tick(); });
 }
 
-/* fallback: tekstur prosedural (dipakai sebelum / bila gambar gagal dimuat) */
+/* fallback: procedural texture (used before, or when an image fails to load) */
 function proceduralTex(hex, banded){
   const c = document.createElement('canvas'); c.width=256; c.height=128;
   const x = c.getContext('2d');
@@ -729,7 +813,7 @@ function makeOrbitLine(a, e, incDeg, nodeDeg, color){
   return line;
 }
 
-/* posisi Kepler: menghasilkan gerak yang benar-benar melambat di aphelion */
+/* Kepler position: yields motion that genuinely slows down at aphelion */
 const tmpV = new THREE.Vector3();
 function keplerPos(a, e, M, out){
   let E = M;
@@ -772,7 +856,7 @@ function atmosphere(r, hex, power){
   }));
 }
 
-/* halo lembut agar planet kecil tetap terlihat dari jauh */
+/* soft halo so small planets stay visible from far away */
 const haloTex = (()=>{
   const cv=document.createElement('canvas'); cv.width=cv.height=128;
   const x=cv.getContext('2d'); const g=x.createRadialGradient(64,64,0,64,64,64);
@@ -799,7 +883,7 @@ for(const d of BODIES){
   if(d.type === 'star'){
     const L = makeLabel(d.name[lang]);
     bodies.push({data:d, obj:sun, mesh:sun, labelEl:L, dispR:S.sunR, moons:[]});
-    // hit target matahari
+    // hit target for the Sun
     const hit = new THREE.Mesh(new THREE.SphereGeometry(S.sunR*1.15, 16, 12),
       new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false, colorWrite:false}));
     hit.userData.key = 'sun'; sun.add(hit); hitTargets.push(hit);
@@ -839,7 +923,7 @@ for(const d of BODIES){
   mesh.userData.key = d.key;
   tilt.add(mesh);
 
-  // awan Bumi
+  // Earth's clouds
   let clouds = null;
   if(d.clouds){
     const cm = new THREE.MeshStandardMaterial({
@@ -854,14 +938,14 @@ for(const d of BODIES){
 
   if(d.ring) tilt.add(buildRing(d.ring, r));
 
-  // hit target besar agar mudah diketuk di layar sentuh
+  // oversized hit target so it is easy to tap on a touch screen
   const hitR = Math.max(r*2.0, 1.6);
   const hit = new THREE.Mesh(new THREE.SphereGeometry(hitR, 14, 10),
     new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false, colorWrite:false}));
   hit.userData.key = d.key;
   holder.add(hit); hitTargets.push(hit);
 
-  // bulan
+  // moons
   const moons = [];
   if(d.moons){
     for(const m of d.moons){
@@ -918,7 +1002,7 @@ const beltBands = [];
     inst.instanceMatrix.needsUpdate = true;
     g.add(inst);
     const aMid = 2.15 + (3.35-2.15)*((f0+f1)/2);
-    beltBands.push({g, rate: 1/Math.pow(aMid,1.5)});   // hukum III Kepler
+    beltBands.push({g, rate: 1/Math.pow(aMid,1.5)});   // Kepler's third law
   }
 })();
 
@@ -937,8 +1021,16 @@ function applyLang(){
     b.labelEl.textContent = b.data.name[lang];
     b.moons.forEach(m => m.labelEl.textContent = m.cfg.name[lang]);
   });
-  buildNav(); buildHelp(); updateSpeedLabel();
+  el('helpBtn').title = t('helpTitle');
+  el('creditsBtn').title = t('creditsTitle');
+  buildNav(); buildHelp(); buildCredits(); updateSpeedLabel();
+  syncHudHeight();
   if(focusKey) openPanel(focusKey, false);
+}
+function setLang(l){
+  lang = l;
+  try{ localStorage.setItem(LANG_KEY, l); }catch(e){}
+  applyLang();
 }
 
 /* ================= UI: nav chips ================= */
@@ -966,6 +1058,18 @@ function buildHelp(){
       .map(([i,a,b])=>`<div class="hrow"><i>${i}</i><div><b>${t(a)}</b><span>${t(b)}</span></div></div>`).join('')}
     <button id="helpClose">${t('close')}</button>`;
   el('helpClose').onclick = ()=> el('help').classList.remove('open');
+}
+
+/* ================= UI: credits ================= */
+function buildCredits(){
+  el('creditsCard').innerHTML = `
+    <h3>${t('creditsTitle')}</h3><div class="sub">${t('creditsSub')}</div>
+    ${CREDITS.map(c=>`<div class="hrow crow"><i>${c.ic}</i><div><b>${c.t[lang]}</b><span>${c.d[lang]}</span>
+      ${c.links.map(l=>`<a href="${l.url}" target="_blank" rel="noopener noreferrer">${l.label}</a>`).join('')}
+      </div></div>`).join('')}
+    <div id="crNote">${t('creditsNote')}</div>
+    <button id="creditsClose">${t('closeShort')}</button>`;
+  el('creditsClose').onclick = ()=> el('credits').classList.remove('open');
 }
 
 /* ================= UI: info panel ================= */
@@ -1046,7 +1150,7 @@ function closePanel(){
   const key = focusKey, wasFollowing = !!followObj;
   el('panel').classList.remove('open');
   focusKey = null; syncNav();
-  if(wasFollowing && key && key !== 'belt') flyTo(key, 0.7);  // rapikan bingkai kembali ke tengah
+  if(wasFollowing && key && key !== 'belt') flyTo(key, 0.7);  // reframe back to the centre
   else followObj = null;
 }
 
@@ -1079,15 +1183,15 @@ function flyTo(key, dur){
   if(!b) return;
   const target = new THREE.Vector3(); (b.holder||sun).getWorldPosition(target);
 
-  // jarak dihitung agar objek (beserta cincin & bulannya) pas di area layar yang terlihat
+  // distance is solved so the body (with its rings & moons) fits the visible screen area
   const d = b.data;
   let needR = b.dispR * 1.5;
   if(d && d.ring) needR = Math.max(needR, b.dispR*d.ring.outer*1.2);
   if(b.moons && b.moons.length) needR = Math.max(needR, b.moons[b.moons.length-1].cfg.d*0.95);
-  const availFrac = (isSmall && panelIsOpen) ? 0.155 : 0.36;   // setengah-tinggi area pandang
+  const availFrac = (isSmall && panelIsOpen) ? 0.155 : 0.36;   // half-height of the visible area
   const dist = Math.max(needR * PX_PER_UNIT() / (innerHeight*availFrac), 3.0);
 
-  // tempatkan kamera di sisi yang disinari Matahari (3/4 view), bukan di sisi malam
+  // put the camera on the sunlit side (3/4 view), never the night side
   const UPV = new THREE.Vector3(0,1,0);
   let dir;
   if(key === 'sun'){
@@ -1095,15 +1199,15 @@ function flyTo(key, dur){
     if(dir.lengthSq()<1e-4) dir.set(0.5,0.4,1);
     dir.normalize(); dir.y = Math.max(dir.y, 0.28); dir.normalize();
   } else {
-    const toSun = target.clone().negate().normalize();          // planet → Matahari
+    const toSun = target.clone().negate().normalize();          // planet → Sun
     const side  = new THREE.Vector3().crossVectors(UPV, toSun).normalize();
-    // elevasi cukup tinggi supaya kamera tidak menembus sabuk asteroid dalam perjalanan
+    // enough elevation that the camera does not fly through the asteroid belt on the way
     dir = toSun.multiplyScalar(0.55).add(side.multiplyScalar(0.52)).add(UPV.clone().multiplyScalar(0.66)).normalize();
   }
 
-  // panel info menutupi sebagian layar → geser titik pandang agar objek tetap di area yang terlihat
+  // the info panel covers part of the screen → shift the look-at point so the body stays visible
   const panelOpen = panelIsOpen;
-  // naikkan objek agar tidak tertutup panel (mobile) atau bilah kontrol bawah (desktop)
+  // lift the body so the panel (mobile) or the bottom control bar (desktop) does not cover it
   const liftPx = (isSmall && panelOpen) ? innerHeight*0.31 : 58;
   const lift = liftPx * dist / PX_PER_UNIT();
   const look = target.clone(); look.y -= lift;
@@ -1173,7 +1277,7 @@ function hover(e){
 const spd = el('spd');
 function speedFromSlider(v){
   if(v<=0) return 0;
-  return Math.pow(10, (v/100)*(Math.log10(600)+2)-2);   // 0.01 … 600 hari/detik
+  return Math.pow(10, (v/100)*(Math.log10(600)+2)-2);   // 0.01 … 600 days/second
 }
 function updateSpeedLabel(){
   spd.style.setProperty('--p', spd.value+'%');
@@ -1201,31 +1305,58 @@ el('tgTop').onclick = goTop;
 el('homeBtn').onclick = goHome;
 el('helpBtn').onclick = ()=> el('help').classList.add('open');
 el('help').onclick = e=>{ if(e.target.id==='help') el('help').classList.remove('open'); };
+el('creditsBtn').onclick = ()=> el('credits').classList.add('open');
+el('credits').onclick = e=>{ if(e.target.id==='credits') el('credits').classList.remove('open'); };
 el('pclose').onclick = closePanel;
-el('langID').onclick = ()=>{ lang='id'; applyLang(); };
-el('langEN').onclick = ()=>{ lang='en'; applyLang(); };
+el('langID').onclick = ()=> setLang('id');
+el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
+  if(el('langGate').classList.contains('open')) return;   // pick a language first
   if(e.code==='Space'){ e.preventDefault(); setPause(!paused); }
-  if(e.key==='Escape') closePanel();
+  if(e.key==='Escape'){
+    if(el('credits').classList.contains('open')) el('credits').classList.remove('open');
+    else if(el('help').classList.contains('open')) el('help').classList.remove('open');
+    else closePanel();
+  }
 });
+
+/* ================= layout ================= */
+/* The planet chips must sit right above the control card, never behind it.
+   The card height shifts with screen width & text length, so it is re-measured. */
+function syncHudHeight(){
+  const h = el('hud').offsetHeight;
+  if(h > 0) document.documentElement.style.setProperty('--hud-h', h + 'px');
+}
+if(window.ResizeObserver) new ResizeObserver(syncHudHeight).observe(el('hud'));
+addEventListener('resize', syncHudHeight);
+addEventListener('load', syncHudHeight);
+requestAnimationFrame(syncHudHeight);
+syncHudHeight();
+
+/* ================= language gate (first visit) ================= */
+const langGate = el('langGate');
+langGate.querySelectorAll('[data-l]').forEach(b=>{
+  b.onclick = ()=>{ setLang(b.dataset.l); langGate.classList.remove('open'); };
+});
+if(!savedLang) langGate.classList.add('open');
 
 /* ================= loop ================= */
 const clock = new THREE.Clock();
 const vpos = new THREE.Vector3(), vscr = new THREE.Vector3(), vprev = new THREE.Vector3();
 const vplanet = new THREE.Vector3(), vA = new THREE.Vector3(), vB = new THREE.Vector3();
 
-/* apakah titik `p` tersembunyi di balik bola berpusat `c` berjari-jari `r`? */
+/* is point `p` hidden behind the sphere centred at `c` with radius `r`? */
 function occluded(p, c, r){
   vA.copy(p).sub(camera.position);
   vB.copy(c).sub(camera.position);
   const dp = vA.length(), dc = vB.length();
-  if(dp <= dc) return false;                    // objek lebih dekat daripada planet
+  if(dp <= dc) return false;                    // the object is nearer than the planet
   const proj = vB.dot(vA)/(dp*dp);
   if(proj <= 0) return false;
-  vA.multiplyScalar(proj).sub(vB);              // jarak tegak lurus pusat planet ke garis pandang
+  vA.multiplyScalar(proj).sub(vB);              // perpendicular distance from the planet centre to the line of sight
   return vA.length() < r;
 }
-const MAX_SPIN = 1.6;   // rad/detik — mencegah efek strobo saat waktu dipercepat
+const MAX_SPIN = 1.6;   // rad/second — prevents a strobe effect when time is sped up
 
 const PX_PER_UNIT = () => (0.5*innerHeight)/Math.tan(camera.fov*0.5*D2R);
 function positionLabel(elm, world, minPx, prio, radius3D){
@@ -1233,7 +1364,7 @@ function positionLabel(elm, world, minPx, prio, radius3D){
   if(vscr.z > 1){ elm.style.opacity = 0; return; }
   const dist = camera.position.distanceTo(world);
   const x = (vscr.x*0.5+0.5)*innerWidth, y = (-vscr.y*0.5+0.5)*innerHeight;
-  // geser label ke bawah objek agar bolanya sendiri tidak tertutup
+  // push the label below the body so the sphere itself stays clear
   const rpx = radius3D ? radius3D*PX_PER_UNIT()/Math.max(dist,0.01) : 0;
   const off = Math.min(Math.max(15, rpx + 13), 110);
   const op = prio ? 1 : Math.max(0, Math.min(1, (minPx - dist)/minPx*2.2));
@@ -1247,12 +1378,12 @@ function animate(){
   const dDays = paused ? 0 : dt*daysPerSec;
   simDays += dDays;
 
-  // matahari
+  // sun
   sun.rotation.y += Math.min(2*Math.PI/(609.12/24)*daysPerSec, MAX_SPIN)*dt*(paused?0:1);
   const pulse = 1 + Math.sin(clock.elapsedTime*0.8)*0.02;
   glowA.scale.setScalar(GA*pulse); glowB.scale.setScalar(GB*(2-pulse));
 
-  // planet
+  // planets
   for(const b of bodies){
     const d = b.data;
     if(d.type==='star') continue;
@@ -1267,19 +1398,19 @@ function animate(){
       for(const m of b.moons){
         const mw = 2*Math.PI/Math.abs(m.cfg.p)*daysPerSec;
         m.group.rotation.y += Math.sign(m.cfg.p)*Math.min(mw, MAX_SPIN)*dt;
-        m.mesh.rotation.y += Math.sign(m.cfg.p)*Math.min(mw, MAX_SPIN)*dt;  // terkunci pasang surut
+        m.mesh.rotation.y += Math.sign(m.cfg.p)*Math.min(mw, MAX_SPIN)*dt;  // tidally locked
       }
     }
   }
 
-  // sabuk asteroid (rotasi diferensial sesuai hukum Kepler)
+  // asteroid belt (differential rotation, per Kepler's law)
   if(!paused) for(const b of beltBands) b.g.rotation.y += b.rate*daysPerSec*dt*0.9;
 
-  // penerbangan kamera
+  // camera flight
   if(flight){
     flight.t += dt/flight.dur;
     const k = easeIO(Math.min(1, flight.t));
-    // target bergerak? ikuti posisinya saat ini
+    // moving target? follow its current position
     if(flight.key){
       bodyWorldPos(flight.key, flight.toT);
       flight.toT.y -= (flight.lift||0);
@@ -1302,12 +1433,12 @@ function animate(){
 
   controls.update();
 
-  // sinkronkan matriks kamera SEBELUM memproyeksikan label,
-  // agar label tidak tertinggal satu frame dari gambar yang dirender
+  // sync the camera matrices BEFORE projecting the labels,
+  // so labels never lag one frame behind the rendered image
   camera.updateMatrixWorld();
   camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
 
-  // halo planet: membesar bila jauh, memudar bila kamera mendekat
+  // planet halo: grows with distance, fades as the camera closes in
   for(const b of bodies){
     if(!b.halo) continue;
     b.holder.getWorldPosition(vpos);
@@ -1360,13 +1491,13 @@ function hideLoader(){
   setTimeout(()=>{ el('hint').classList.add('hide'); }, 9000);
 }
 manager.onLoad = hideLoader;
-setTimeout(hideLoader, 7000);   // jangan pernah menahan pengguna bila CDN lambat
+setTimeout(hideLoader, 7000);   // never hold the user hostage to a slow CDN
 
 </script>
 
 <script>
-/* Jika pustaka 3D gagal dimuat (mis. tanpa koneksi internet), beri tahu pengguna
-   alih-alih membiarkan layar pemuatan berputar selamanya. */
+/* If the 3D library fails to load (e.g. no internet connection), tell the user
+   instead of leaving the loading screen spinning forever. */
 setTimeout(function(){
   if(window.__dbg) return;
   var l = document.getElementById('loader');
