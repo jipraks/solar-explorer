@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05060f">
 <title>Jelajah Tata Surya · Explore the Solar System</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tata Surya">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Simulasi tata surya 3D interaktif untuk anak — jelajahi, dengarkan, dan terbangkan pesawatmu sendiri.">
 <style>
   :root{
     --bg:#05060f;
@@ -58,6 +66,9 @@
   .iconbtn svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
   .iconbtn.on{background:rgba(124,196,255,.2);border-color:rgba(124,196,255,.45)}
   .iconbtn.on svg{stroke:var(--accent)}
+  .iconbtn.hide{display:none}
+  #installBtn{border-color:rgba(255,212,121,.45);background:rgba(255,212,121,.16)}
+  #installBtn svg{stroke:var(--accent2)}
 
   /* ---------- Planet nav ---------- */
   /* 12px = #hud offset from the bottom, 8px = gap between the chips and the card */
@@ -169,11 +180,45 @@
     font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
   #cockpit.open{display:block}
   #cockpit>*{pointer-events:auto}
-  /* the canopy: a vignette plus a thin frame, enough to read as "inside a ship" */
-  #ckFrame{position:absolute;inset:0;pointer-events:none;
-    box-shadow:inset 0 0 150px 34px rgba(3,6,18,.72)}
-  #ckFrame::after{content:"";position:absolute;inset:9px;border-radius:20px;
-    border:1px solid rgba(124,196,255,.14)}
+  /* ---- the canopy ----
+     Everything outside the rounded window is painted by one enormous spread
+     shadow, which is how the hull stays a single element and still fits any
+     screen shape. --hull is swapped to red when the ship is wrecked. */
+  /* the hull has to sit clearly lighter than space, or the canopy reads as a
+     thin border rather than as something you are sitting inside */
+  #cockpit{--hull:#0b1020;--frame:#141b33;--vig:rgba(4,7,18,.82);--rim:rgba(150,200,255,.34)}
+  #cockpit.wreck{--hull:#170a0e;--frame:#2a1218;--vig:rgba(122,14,14,.72);--rim:rgba(255,150,140,.36)}
+  #ckFrame{position:absolute;inset:0;pointer-events:none}
+  #ckGlass{position:absolute;inset:30px 34px 34px;border-radius:94px;pointer-events:none;
+    transition:box-shadow .35s ease;
+    box-shadow:
+      0 0 0 1px var(--rim),                       /* inner edge of the glass */
+      0 0 0 12px var(--frame),                    /* the frame itself */
+      0 0 0 13px rgba(160,205,255,.2),            /* light catching the metal */
+      0 0 0 9999px var(--hull),                   /* the hull, out to any size */
+      inset 0 0 120px 34px var(--vig),
+      inset 0 46px 64px -32px rgba(0,0,0,.9)}     /* the roof overhanging the view */
+  /* a faint sheen, as if there were glass in the way */
+  #ckSheen{position:absolute;inset:30px 34px 34px;border-radius:94px;pointer-events:none;
+    background:linear-gradient(116deg,rgba(190,220,255,.06) 0%,rgba(190,220,255,0) 33%,
+      rgba(190,220,255,0) 63%,rgba(160,205,255,.035) 100%)}
+  /* the console the controls are mounted on */
+  #ckConsole{position:absolute;left:-14%;right:-14%;bottom:0;height:138px;pointer-events:none;
+    background:linear-gradient(180deg,#0b1020 0%,#070a16 55%,#05070f 100%);
+    border-top:1px solid rgba(140,185,255,.16);
+    border-radius:50% 50% 0 0 / 78px 78px 0 0;
+    box-shadow:0 -20px 44px rgba(0,0,0,.6)}
+  #ckConsole::after{content:"";position:absolute;left:0;right:0;top:1px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(150,195,255,.22) 22%,rgba(150,195,255,.22) 78%,transparent)}
+  /* two ribs, kept out towards the edges so they never sit over the crosshair */
+  /* scoped under #cockpit: a bare class loses to "#cockpit>*{pointer-events:auto}"
+     and the ribs would then swallow drags meant for steering */
+  #cockpit .ckRib{position:absolute;top:30px;bottom:34px;width:17px;pointer-events:none;
+    background:linear-gradient(90deg,rgba(11,16,32,0),#0c1122 26%,#1a2240 52%,#0c1122 74%,rgba(11,16,32,0));
+    box-shadow:0 0 30px rgba(0,0,0,.6)}
+  #cockpit .ckRib::after{content:"";position:absolute;top:0;bottom:0;left:52%;width:1px;
+    background:linear-gradient(180deg,transparent,rgba(160,205,255,.22) 20%,rgba(160,205,255,.22) 80%,transparent)}
+  #cockpit .ckRib.l{left:11%} #cockpit .ckRib.r{right:11%}
   #ckCross{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none;
     border:1px solid rgba(124,196,255,.34);border-radius:50%}
   #ckCross::before,#ckCross::after{content:"";position:absolute;background:rgba(124,196,255,.5)}
@@ -226,10 +271,10 @@
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);white-space:nowrap}
   .ckb:active{transform:scale(.95)}
   .ckb.hide{display:none}
-  #ckVoice,#ckEngine{width:42px;padding:9px 0;display:grid;place-items:center}
-  #ckVoice svg,#ckEngine svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  #ckVoice.on,#ckEngine.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
-  #ckVoice.on svg,#ckEngine.on svg{stroke:var(--accent)}
+  #ckVoice,#ckEngine,#ckFs{width:42px;padding:9px 0;display:grid;place-items:center}
+  #ckVoice svg,#ckEngine svg,#ckFs svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #ckVoice.on,#ckEngine.on,#ckFs.on{border-color:rgba(124,196,255,.5);background:rgba(124,196,255,.16)}
+  #ckVoice.on svg,#ckEngine.on svg,#ckFs.on svg{stroke:var(--accent)}
   #ckData{border-color:rgba(255,212,121,.55);background:rgba(255,212,121,.18);color:var(--accent2)}
   #ckExit{border-color:rgba(255,255,255,.18)}
 
@@ -244,8 +289,6 @@
   #ckFlash{position:absolute;inset:0;pointer-events:none;opacity:0;
     background:radial-gradient(circle at 50% 50%,rgba(255,247,220,.96),rgba(255,140,44,.6) 42%,rgba(255,60,20,0) 74%)}
   #ckFlash.on{opacity:1}
-  #cockpit.wreck #ckFrame{box-shadow:inset 0 0 175px 48px rgba(96,10,10,.82)}
-  #cockpit.wreck #ckFrame::after{border-color:rgba(255,120,110,.3)}
   #ckWreck{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:0;transition:opacity .25s;
     font-size:27px;font-weight:720;letter-spacing:.14em;text-transform:uppercase;color:#ffc2bd;
     text-shadow:0 2px 24px rgba(255,70,45,.75);pointer-events:none;white-space:nowrap}
@@ -266,6 +309,22 @@
     #ckSpeed,#ckTarget{min-width:106px;padding:7px 11px}
     .ckBig{font-size:16.5px}
     #ckWreck{font-size:21px}
+    /* a phone has no screen to spare: pull the canopy in and drop the ribs */
+    #ckGlass,#ckSheen{inset:15px 16px 18px;border-radius:54px}
+    #ckGlass{box-shadow:
+      0 0 0 1px var(--rim),
+      0 0 0 8px var(--frame),
+      0 0 0 9px rgba(160,205,255,.2),
+      0 0 0 9999px var(--hull),
+      inset 0 0 90px 26px var(--vig),
+      inset 0 34px 46px -24px rgba(0,0,0,.9)}
+    #cockpit .ckRib{display:none}
+    #ckConsole{height:104px;border-radius:50% 50% 0 0 / 58px 58px 0 0}
+    /* the top bar carries six buttons now — tighten it so nothing wraps */
+    #top{gap:6px;padding-left:10px;padding-right:10px}
+    .iconbtn{width:34px;height:34px;border-radius:10px}
+    .iconbtn svg{width:17px;height:17px}
+    .pill button{padding:6px 9px;font-size:12px}
     /* the button row grows when "open data" appears; at the bottom it would
        then reach under the steering stick, so on a phone it lives up top */
     #ckBtns{top:calc(86px + var(--safe-t));bottom:auto;gap:6px}
@@ -363,6 +422,12 @@
     <button id="langID" class="on">ID</button>
     <button id="langEN">EN</button>
   </div>
+  <button class="iconbtn hide" id="installBtn" aria-label="install">
+    <svg viewBox="0 0 24 24"><path d="M12 3.5v10.5"/><path d="M8.2 10.3L12 14.1l3.8-3.8"/><path d="M4.5 16.5v2.2a1.8 1.8 0 001.8 1.8h11.4a1.8 1.8 0 001.8-1.8v-2.2"/></svg>
+  </button>
+  <button class="iconbtn" id="fsBtn" aria-label="fullscreen">
+    <svg viewBox="0 0 24 24"><path id="fsIco" d="M4 9V4.5h4.6M20 9V4.5h-4.6M4 15v4.5h4.6M20 15v4.5h-4.6"/></svg>
+  </button>
   <button class="iconbtn" id="pilotBtn" aria-label="pilot">
     <svg viewBox="0 0 24 24"><path d="M12 2.6c2.6 2.2 4 5.4 4 9v4.2l2.1 2.3v1.5l-3.4-1.3H9.3L5.9 19.6v-1.5L8 15.8V11.6c0-3.6 1.4-6.8 4-9z"/><circle cx="12" cy="10" r="1.7"/></svg>
   </button>
@@ -409,8 +474,13 @@
 </div>
 
 <div id="cockpit">
-  <div id="ckFlash"></div>
   <div id="ckFrame"></div>
+  <div id="ckGlass"></div>
+  <div id="ckSheen"></div>
+  <div class="ckRib l"></div>
+  <div class="ckRib r"></div>
+  <div id="ckConsole"></div>
+  <div id="ckFlash"></div>
   <div id="ckCross"></div>
   <div id="ckDot"></div>
   <div id="ckWarn"></div>
@@ -443,6 +513,9 @@
     </button>
     <button class="ckb on" id="ckEngine" aria-label="engine sound">
       <svg viewBox="0 0 24 24"><path d="M4 13.5v-3M8 16.5v-9M12 18.5v-13M16 15.5v-7M20 12.5v-1"/></svg>
+    </button>
+    <button class="ckb" id="ckFs" aria-label="fullscreen">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4.5h4.6M20 9V4.5h-4.6M4 15v4.5h4.6M20 15v4.5h-4.6"/></svg>
     </button>
     <button class="ckb hide" id="ckData">Buka data</button>
     <button class="ckb" id="ckExit">Keluar</button>
@@ -499,6 +572,7 @@ const UI = {
     more: "Baca penjelasan lengkap", less: "Sembunyikan penjelasan",
     listen: "Bacakan", listenStop: "Hentikan",
     pilot: "Mode pilot",
+    fsOn: "Layar penuh", fsOff: "Keluar layar penuh", install: "Pasang aplikasi",
     ckThr: "Dorongan", ckSpd: "Kecepatan", ckTgt: "Terdekat",
     ckExit: "Keluar", ckData: "Buka data", ckVoice: "Suara komputer", ckEngine: "Suara mesin",
     ckUnit: "juta km/detik", ckDistUnit: "juta km", ckLight: "× kecepatan cahaya",
@@ -551,6 +625,7 @@ const UI = {
     more: "Read the full explanation", less: "Hide explanation",
     listen: "Read aloud", listenStop: "Stop",
     pilot: "Pilot mode",
+    fsOn: "Full screen", fsOff: "Leave full screen", install: "Install app",
     ckThr: "Thrust", ckSpd: "Speed", ckTgt: "Nearest",
     ckExit: "Exit", ckData: "Open data", ckVoice: "Ship computer voice", ckEngine: "Engine sound",
     ckUnit: "million km/sec", ckDistUnit: "million km", ckLight: "× the speed of light",
@@ -1250,6 +1325,8 @@ function applyLang(){
   });
   el('helpBtn').title = t('helpTitle');
   el('creditsBtn').title = t('creditsTitle');
+  el('installBtn').title = t('install');
+  syncFullscreenUI();
   buildNav(); buildHelp(); buildCredits(); updateSpeedLabel();
   syncCockpitLang();
   syncHudHeight();
@@ -1740,6 +1817,7 @@ el('langID').onclick = ()=> setLang('id');
 el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
   if(el('langGate').classList.contains('open')) return;   // pick a language first
+  if(e.key === 'f' || e.key === 'F'){ toggleFullscreen(); return; }
   if(pilot){
     if(steerKey(e.code, true)){ e.preventDefault(); el('ckHint').classList.add('hide'); return; }
     if(e.code==='Space'){ e.preventDefault(); braking = true; return; }
@@ -2462,6 +2540,71 @@ document.addEventListener('visibilitychange', ()=>{
 });
 setThrottle(0);
 
+/* ================= full screen =================
+   Prefixed calls are still needed for Safari, and iPhone Safari has no
+   element fullscreen at all — there the button is hidden rather than left
+   as a control that does nothing when a child presses it. */
+const ICO_FS_IN  = '<path d="M4 9V4.5h4.6M20 9V4.5h-4.6M4 15v4.5h4.6M20 15v4.5h-4.6"/>';
+const ICO_FS_OUT = '<path d="M8.8 4.4V9H4.2M15.2 4.4V9h4.6M8.8 19.6V15H4.2M15.2 19.6V15h4.6"/>';
+const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+function toggleFullscreen(){
+  const root = document.documentElement;
+  try{
+    if(fsElement()){
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const r = exit && exit.call(document);
+      if(r && r.catch) r.catch(()=>{});
+    } else {
+      const enter = root.requestFullscreen || root.webkitRequestFullscreen;
+      const r = enter && enter.call(root, {navigationUI:'hide'});
+      if(r && r.catch) r.catch(()=>{});
+    }
+  }catch(e){}
+}
+function syncFullscreenUI(){
+  const on = !!fsElement();
+  for(const id of ['fsBtn', 'ckFs']){          // top bar and cockpit share the state
+    const b = el(id);
+    b.classList.toggle('hide', !fsEnabled);
+    b.classList.toggle('on', on);
+    b.querySelector('svg').innerHTML = on ? ICO_FS_OUT : ICO_FS_IN;
+    b.title = t(on ? 'fsOff' : 'fsOn');
+  }
+}
+el('fsBtn').onclick = toggleFullscreen;
+el('ckFs').onclick = toggleFullscreen;
+document.addEventListener('fullscreenchange', syncFullscreenUI);
+document.addEventListener('webkitfullscreenchange', syncFullscreenUI);
+syncFullscreenUI();
+
+/* ================= install as an app =================
+   Chromium fires beforeinstallprompt and lets the page ask at a moment of its
+   choosing; the button only appears when there is a prompt to show, so it is
+   never a dead control. iOS has no such event — Safari installs through its
+   own Share menu, so nothing is shown there. */
+let installPrompt = null;
+addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  installPrompt = e;
+  el('installBtn').classList.remove('hide');
+  el('installBtn').title = t('install');
+});
+el('installBtn').onclick = async ()=>{
+  if(!installPrompt) return;
+  el('installBtn').classList.add('hide');
+  try{
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+  }catch(e){}
+  installPrompt = null;
+};
+addEventListener('appinstalled', ()=>{
+  installPrompt = null;
+  el('installBtn').classList.add('hide');
+});
+
 /* ================= layout ================= */
 /* The planet chips must sit right above the control card, never behind it.
    The card height shifts with screen width & text length, so it is re-measured. */
@@ -2646,6 +2789,18 @@ function hideLoader(){
 manager.onLoad = hideLoader;
 setTimeout(hideLoader, 7000);   // never hold the user hostage to a slow CDN
 
+</script>
+
+<script>
+/* Register the service worker: it makes the app installable and lets it open
+   without a network. Only meaningful on https (or localhost), and a failure
+   here must never stop the app from running. */
+if('serviceWorker' in navigator &&
+   (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+  addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
 </script>
 
 <script>
