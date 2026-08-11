@@ -180,45 +180,104 @@
     font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
   #cockpit.open{display:block}
   #cockpit>*{pointer-events:auto}
-  /* ---- the canopy ----
-     Everything outside the rounded window is painted by one enormous spread
-     shadow, which is how the hull stays a single element and still fits any
-     screen shape. --hull is swapped to red when the ship is wrecked. */
-  /* the hull has to sit clearly lighter than space, or the canopy reads as a
-     thin border rather than as something you are sitting inside */
-  #cockpit{--hull:#0b1020;--frame:#141b33;--vig:rgba(4,7,18,.82);--rim:rgba(150,200,255,.34)}
-  #cockpit.wreck{--hull:#170a0e;--frame:#2a1218;--vig:rgba(122,14,14,.72);--rim:rgba(255,150,140,.36)}
-  #ckFrame{position:absolute;inset:0;pointer-events:none}
-  #ckGlass{position:absolute;inset:30px 34px 34px;border-radius:94px;pointer-events:none;
-    transition:box-shadow .35s ease;
+  /* ---- the cabin ----
+     A real interior rather than a border: a lit ceiling beam, two side pillars
+     carrying instrument banks, a dashboard, and mullions splitting the glass
+     into three panes. The frame sizes live in variables so the window, the
+     media queries and the tests all agree on one set of numbers. */
+  #cockpit{--ckTop:56px;--ckSide:96px;--ckBot:176px;
+    --hull:#0b1020;--metal:#141b30;--metal2:#1c2540;--edge:rgba(150,200,255,.22);
+    --vig:rgba(4,7,18,.8);--rim:rgba(150,200,255,.34);--lit:#5ec8ff}
+  #cockpit.wreck{--hull:#170a0e;--metal:#2a1218;--metal2:#3a1a20;--edge:rgba(255,150,140,.24);
+    --vig:rgba(122,14,14,.7);--rim:rgba(255,150,140,.36);--lit:#ff6a5a}
+  #cockpit #ckFrame,#cockpit #ckGlass,#cockpit #ckSheen,#cockpit #ckCeil,#cockpit #ckDash,
+  #cockpit .ckPillar,#cockpit .ckMul{pointer-events:none}
+
+  #ckFrame{position:absolute;inset:0}
+  /* the window: everything outside it is hull, painted by one huge shadow */
+  #ckGlass{position:absolute;top:var(--ckTop);left:var(--ckSide);right:var(--ckSide);bottom:var(--ckBot);
+    border-radius:26px;transition:box-shadow .35s ease;
     box-shadow:
-      0 0 0 1px var(--rim),                       /* inner edge of the glass */
-      0 0 0 12px var(--frame),                    /* the frame itself */
-      0 0 0 13px rgba(160,205,255,.2),            /* light catching the metal */
-      0 0 0 9999px var(--hull),                   /* the hull, out to any size */
+      0 0 0 1px var(--rim),
+      0 0 0 5px var(--metal),
+      0 0 0 6px var(--edge),
+      0 0 0 9999px var(--hull),
       inset 0 0 120px 34px var(--vig),
-      inset 0 46px 64px -32px rgba(0,0,0,.9)}     /* the roof overhanging the view */
-  /* a faint sheen, as if there were glass in the way */
-  #ckSheen{position:absolute;inset:30px 34px 34px;border-radius:94px;pointer-events:none;
-    background:linear-gradient(116deg,rgba(190,220,255,.06) 0%,rgba(190,220,255,0) 33%,
-      rgba(190,220,255,0) 63%,rgba(160,205,255,.035) 100%)}
-  /* the console the controls are mounted on */
-  #ckConsole{position:absolute;left:-14%;right:-14%;bottom:0;height:138px;pointer-events:none;
-    background:linear-gradient(180deg,#0b1020 0%,#070a16 55%,#05070f 100%);
-    border-top:1px solid rgba(140,185,255,.16);
-    border-radius:50% 50% 0 0 / 78px 78px 0 0;
-    box-shadow:0 -20px 44px rgba(0,0,0,.6)}
-  #ckConsole::after{content:"";position:absolute;left:0;right:0;top:1px;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(150,195,255,.22) 22%,rgba(150,195,255,.22) 78%,transparent)}
-  /* two ribs, kept out towards the edges so they never sit over the crosshair */
-  /* scoped under #cockpit: a bare class loses to "#cockpit>*{pointer-events:auto}"
-     and the ribs would then swallow drags meant for steering */
-  #cockpit .ckRib{position:absolute;top:30px;bottom:34px;width:17px;pointer-events:none;
-    background:linear-gradient(90deg,rgba(11,16,32,0),#0c1122 26%,#1a2240 52%,#0c1122 74%,rgba(11,16,32,0));
-    box-shadow:0 0 30px rgba(0,0,0,.6)}
-  #cockpit .ckRib::after{content:"";position:absolute;top:0;bottom:0;left:52%;width:1px;
-    background:linear-gradient(180deg,transparent,rgba(160,205,255,.22) 20%,rgba(160,205,255,.22) 80%,transparent)}
-  #cockpit .ckRib.l{left:11%} #cockpit .ckRib.r{right:11%}
+      inset 0 40px 56px -30px rgba(0,0,0,.85)}
+  #ckSheen{position:absolute;top:var(--ckTop);left:var(--ckSide);right:var(--ckSide);bottom:var(--ckBot);
+    border-radius:26px;
+    background:linear-gradient(116deg,rgba(190,220,255,.06) 0%,rgba(190,220,255,0) 32%,
+      rgba(190,220,255,0) 64%,rgba(160,205,255,.035) 100%)}
+
+  /* mullions: slightly wider at the foot, which reads as perspective */
+  #cockpit .ckMul{position:absolute;top:var(--ckTop);bottom:var(--ckBot);width:26px;
+    background:linear-gradient(90deg,rgba(11,16,32,0),var(--metal) 22%,var(--metal2) 50%,var(--metal) 78%,rgba(11,16,32,0));
+    clip-path:polygon(30% 0,70% 0,100% 100%,0 100%)}
+  #cockpit .ckMul::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent,rgba(160,205,255,.16) 30%,rgba(160,205,255,.16) 70%,transparent);
+    clip-path:polygon(46% 0,54% 0,58% 100%,42% 100%)}
+  #cockpit .ckMul.l{left:calc(var(--ckSide) + 21%)}
+  #cockpit .ckMul.r{right:calc(var(--ckSide) + 21%)}
+
+  /* ceiling beam */
+  #ckCeil{position:absolute;left:0;right:0;top:0;height:var(--ckTop);
+    background:linear-gradient(180deg,#080c18,var(--metal) 55%,#0a0f1e);
+    border-bottom:1px solid var(--edge);
+    box-shadow:inset 0 -14px 26px -14px rgba(0,0,0,.9)}
+  #ckCeil::after{content:"";position:absolute;left:12%;right:12%;bottom:7px;height:2px;border-radius:2px;
+    background:linear-gradient(90deg,transparent,var(--lit),transparent);opacity:.5;
+    box-shadow:0 0 14px 2px var(--lit)}
+
+  /* side pillars, angled so the cabin feels like it wraps around you */
+  #cockpit .ckPillar{position:absolute;top:0;bottom:0;width:var(--ckSide);
+    background:linear-gradient(90deg,#070b16,var(--metal) 46%,var(--metal2) 84%,#0a0f1e);
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #cockpit .ckPillar.l{left:0;clip-path:polygon(0 0,100% 0,86% 100%,0 100%)}
+  #cockpit .ckPillar.r{right:0;background:linear-gradient(270deg,#070b16,var(--metal) 46%,var(--metal2) 84%,#0a0f1e);
+    clip-path:polygon(0 0,100% 0,100% 100%,14% 100%)}
+  #cockpit .ckPillar::before{content:"";position:absolute;top:8%;bottom:8%;width:2px;border-radius:2px;
+    background:linear-gradient(180deg,transparent,var(--lit),transparent);opacity:.4;
+    box-shadow:0 0 12px 1px var(--lit)}
+  #cockpit .ckPillar.l::before{right:9px} #cockpit .ckPillar.r::before{left:9px}
+  /* a vent grille, so the pillar is not just a bank floating in the dark */
+  #cockpit .ckPillar::after{content:"";position:absolute;left:16px;right:16px;height:38px;top:12%;
+    background:repeating-linear-gradient(180deg,rgba(150,200,255,.11) 0 2px,transparent 2px 6px);
+    border-radius:3px;box-shadow:inset 0 0 0 1px rgba(150,200,255,.09)}
+
+  /* dashboard */
+  #ckDash{position:absolute;left:0;right:0;bottom:0;height:var(--ckBot);
+    background:linear-gradient(180deg,var(--metal2) 0%,var(--metal) 22%,#090d1a 70%,#05070f 100%);
+    border-top:1px solid var(--edge);
+    box-shadow:0 -22px 46px rgba(0,0,0,.6),inset 0 22px 30px -22px rgba(160,205,255,.16);
+    display:flex;align-items:flex-start;justify-content:center;gap:26px;padding:14px 210px 0}
+  #ckDash::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+    background:linear-gradient(90deg,transparent,var(--lit),transparent);opacity:.32}
+
+  /* instrument pieces, filled in by app.js so the markup stays readable */
+  #cockpit .ckBank{display:grid;gap:5px;align-content:start}
+  #cockpit .ckPillar .ckBank{grid-template-columns:repeat(3,1fr);width:62px}
+  #cockpit #ckDash .ckBank{grid-template-columns:repeat(6,1fr)}
+  #cockpit .key{height:11px;border-radius:3px;background:linear-gradient(180deg,#28324f,#131a2e);
+    box-shadow:inset 0 1px 0 rgba(180,215,255,.22),0 1px 2px rgba(0,0,0,.6)}
+  #cockpit .led{height:9px;width:9px;border-radius:50%;justify-self:center;background:currentColor;
+    box-shadow:0 0 8px 1px currentColor;animation:ledBlink 4s steps(1,end) infinite}
+  #cockpit .sw{height:15px;border-radius:3px;background:linear-gradient(180deg,#0e1424,#1b2440);
+    box-shadow:inset 0 0 0 1px rgba(150,200,255,.16);position:relative}
+  #cockpit .sw::after{content:"";position:absolute;left:2px;right:2px;top:2px;height:5px;border-radius:2px;
+    background:linear-gradient(180deg,#8fb6e8,#4d6da3)}
+  #cockpit .sw.dn::after{top:auto;bottom:2px}
+  @keyframes ledBlink{0%,72%{opacity:1}73%,100%{opacity:.18}}
+  #cockpit .scr{width:104px;height:66px;border-radius:7px;position:relative;overflow:hidden;flex:0 0 auto;
+    background:linear-gradient(180deg,rgba(30,60,100,.85),rgba(10,20,40,.9));
+    box-shadow:inset 0 0 0 1px rgba(150,200,255,.28),inset 0 0 22px rgba(94,200,255,.22)}
+  #cockpit .scr::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(180deg,rgba(94,200,255,.16) 0 1px,transparent 1px 5px)}
+  #cockpit .scr::after{content:"";position:absolute;left:8px;right:8px;bottom:9px;height:22px;
+    background:linear-gradient(90deg,var(--lit) 0 8px,transparent 8px 14px,var(--lit) 14px 20px,
+      transparent 20px 30px,var(--lit) 30px 44px,transparent 44px 52px,var(--lit) 52px 60px,
+      transparent 60px 72px,var(--lit) 72px 88px);
+    opacity:.45;mask-image:linear-gradient(180deg,transparent,#000)}
+
   #ckCross{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none;
     border:1px solid rgba(124,196,255,.34);border-radius:50%}
   #ckCross::before,#ckCross::after{content:"";position:absolute;background:rgba(124,196,255,.5)}
@@ -309,17 +368,26 @@
     #ckSpeed,#ckTarget{min-width:106px;padding:7px 11px}
     .ckBig{font-size:16.5px}
     #ckWreck{font-size:21px}
-    /* a phone has no screen to spare: pull the canopy in and drop the ribs */
-    #ckGlass,#ckSheen{inset:15px 16px 18px;border-radius:54px}
-    #ckGlass{box-shadow:
+    /* a phone has no screen to spare: a slimmer cabin, fewer instruments */
+    #cockpit{--ckTop:30px;--ckSide:34px;--ckBot:104px}
+    #ckGlass{border-radius:16px;box-shadow:
       0 0 0 1px var(--rim),
-      0 0 0 8px var(--frame),
-      0 0 0 9px rgba(160,205,255,.2),
+      0 0 0 4px var(--metal),
+      0 0 0 5px var(--edge),
       0 0 0 9999px var(--hull),
       inset 0 0 90px 26px var(--vig),
-      inset 0 34px 46px -24px rgba(0,0,0,.9)}
-    #cockpit .ckRib{display:none}
-    #ckConsole{height:104px;border-radius:50% 50% 0 0 / 58px 58px 0 0}
+      inset 0 30px 42px -24px rgba(0,0,0,.9)}
+    #ckSheen{border-radius:16px}
+    /* the pillars are too narrow here to carry instruments, and splitting a
+       phone-sized window into three panes throws away most of the view */
+    #cockpit .ckMul{display:none}
+    #cockpit .ckPillar .ckBank{display:none}
+    #cockpit .ckPillar::after{left:8px;right:8px;height:26px}
+    #ckDash{padding:8px 120px 0;gap:12px}
+    #cockpit #ckDash .ckBank{grid-template-columns:repeat(4,1fr);gap:4px}
+    #cockpit #ckDash .ckBank>*:nth-child(n+9){display:none}
+    #cockpit .scr{width:62px;height:44px}
+    #cockpit #ckDash .scr+.scr{display:none}
     /* the top bar carries six buttons now — tighten it so nothing wraps */
     #top{gap:6px;padding-left:10px;padding-right:10px}
     .iconbtn{width:34px;height:34px;border-radius:10px}
@@ -477,9 +545,17 @@
   <div id="ckFrame"></div>
   <div id="ckGlass"></div>
   <div id="ckSheen"></div>
-  <div class="ckRib l"></div>
-  <div class="ckRib r"></div>
-  <div id="ckConsole"></div>
+  <div class="ckMul l"></div>
+  <div class="ckMul r"></div>
+  <div id="ckCeil"></div>
+  <div class="ckPillar l"><div class="ckBank"></div></div>
+  <div class="ckPillar r"><div class="ckBank"></div></div>
+  <div id="ckDash">
+    <div class="ckBank"></div>
+    <div class="scr"></div>
+    <div class="scr"></div>
+    <div class="ckBank"></div>
+  </div>
   <div id="ckFlash"></div>
   <div id="ckCross"></div>
   <div id="ckDot"></div>

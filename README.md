@@ -107,17 +107,23 @@ Details that matter more than they sound:
   flying — and clears itself — even if you leave the cockpit mid-explosion.
 - **The engine falls silent** while the ship is wreckage.
 
-### The cockpit canopy
+### The cockpit cabin
 
-Pilot mode is framed like the inside of a cabin: a rounded window with a lit metal
-rim, two canopy ribs kept out towards the edges so they never sit over the crosshair,
-a faint sheen as if there were glass in the way, a roof shadow across the top of the
-view, and a curved console the stick and thrust lever are mounted on. It turns red
+Pilot mode is framed as an interior, not a border: a lit ceiling beam, two angled side
+pillars carrying instrument banks and a vent grille, a dashboard with button banks and
+two glowing screens, and mullions splitting the glass into three panes. It all turns red
 when the ship is wrecked.
 
-It is all CSS on one element — the hull is a single enormous spread shadow around a
-rounded rectangle, which is why it fits any screen shape without artwork. The window
-still leaves about 87% of the screen visible.
+Every part of it is CSS — the hull is a single enormous spread shadow around the window
+rectangle, so it fits any screen shape with no artwork — and the instrument banks are
+generated in `app.js` from a seeded sequence, so the layout is identical on every load
+without a few hundred lines of markup. The lamps blink on staggered timers.
+
+The frame sizes live in CSS variables (`--ckTop`, `--ckSide`, `--ckBot`) so the window,
+the media queries and the tests all read from one set of numbers. The window keeps about
+60% of the screen on a desktop. A phone gets a slimmer cabin: no mullions and no pillar
+instruments, because splitting a small window into three panes throws away most of the
+view and a 34px pillar is too narrow to carry anything legible.
 
 ### Engine sound
 
