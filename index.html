@@ -2647,6 +2647,49 @@ document.addEventListener('visibilitychange', ()=>{
 });
 setThrottle(0);
 
+/* ================= keeping the screen awake =================
+   A tablet locking itself mid-orbit is the single most annoying thing about
+   watching this app, so the screen wake lock is held for as long as the page
+   is visible. The browser drops the lock by itself whenever the page is
+   hidden, which is what keeps this from draining a battery in a pocket — so
+   it has to be taken again on the way back.
+
+   Chromium grants it on load; Safari (16.4+) refuses until the page has been
+   interacted with, hence the retry on the first touch or key. Older iOS has
+   no wake lock at all and simply goes without. */
+let wakeLock = null;
+/* not `'wakeLock' in navigator`: a browser can expose the name with nothing
+   behind it, and then the feature reads as supported while every call fails */
+const wakeSupported = !!(navigator.wakeLock && typeof navigator.wakeLock.request === 'function');
+
+async function keepAwake(){
+  if(!wakeSupported || wakeLock || document.hidden) return;
+  try{
+    wakeLock = await navigator.wakeLock.request('screen');
+    // the browser can revoke it at any time; forget it so we can ask again
+    wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+  }catch(e){
+    wakeLock = null;      // typically NotAllowedError until a gesture arrives
+  }
+}
+function dropAwake(){
+  if(!wakeLock) return;
+  try{ wakeLock.release(); }catch(e){}
+  wakeLock = null;
+}
+
+if(wakeSupported){
+  keepAwake();
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) wakeLock = null;   // already released by the browser
+    else keepAwake();
+  });
+  // Safari only allows it after user activation, so try again on early input
+  addEventListener('pointerdown', keepAwake, {passive:true});
+  addEventListener('keydown', keepAwake);
+  addEventListener('pagehide', dropAwake);
+}
+
 /* ================= full screen =================
    Prefixed calls are still needed for Safari, and iPhone Safari has no
    element fullscreen at all — there the button is hidden rather than left
@@ -2875,6 +2918,7 @@ window.__dbg = () => ({
   dist: +camera.position.distanceTo(controls.target).toFixed(2),
   follow: followObj, flying: !!flight,
   pilot, throttle: +throttle.toFixed(2), engineOn,
+  wakeSupported, awake: !!wakeLock,
   wrecked: !!wreckUntil, debris: boomLife > 0,
   audio: actx ? {state: actx.state,
     level: +eng.level.gain.value.toFixed(3), duck: +eng.duck.gain.value.toFixed(3),
