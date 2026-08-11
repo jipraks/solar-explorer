@@ -1123,6 +1123,37 @@ function sayOnce(kind, text, gapMs, force){
   return spoke;
 }
 
+/* The instrument banks are generated rather than written out: a few dozen
+   keys, switches and lamps as markup would drown the template, and the layout
+   is the same every time because the sequence is seeded, not random. */
+(function buildInstruments(){
+  let seed = 20260811;
+  const rnd = () => (seed = (seed*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const LAMP = ['#5ec8ff', '#7dffa8', '#ffd479', '#ff8a6a', '#c9a2ff'];
+
+  for(const bank of document.querySelectorAll('#cockpit .ckBank')){
+    const onPillar = !!bank.closest('.ckPillar');
+    const count = onPillar ? 18 : 24;
+    for(let i=0;i<count;i++){
+      const r = rnd();
+      const cell = document.createElement('span');
+      if(r < 0.3){
+        cell.className = 'led';
+        cell.style.color = LAMP[Math.floor(rnd()*LAMP.length)];
+        cell.style.animationDelay = (rnd()*4).toFixed(2) + 's';
+        cell.style.animationDuration = (2.6 + rnd()*4).toFixed(2) + 's';
+        if(rnd() < 0.35) cell.style.animation = 'none';      // some lamps just stay lit
+      } else if(r < 0.45){
+        cell.className = 'sw' + (rnd() < 0.5 ? ' dn' : '');
+      } else {
+        cell.className = 'key';
+        cell.style.opacity = (0.65 + rnd()*0.35).toFixed(2);
+      }
+      bank.appendChild(cell);
+    }
+  }
+})();
+
 function syncCockpitLang(){
   el('ckSpdLab').textContent = t('ckSpd');
   el('ckTgtLab').textContent = t('ckTgt');
