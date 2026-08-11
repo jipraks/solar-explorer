@@ -1,6 +1,6 @@
 # 🪐 Solar Explorer
 
-An interactive 3D solar-system simulation built for education — orbit it, zoom into it, and tap any planet for the full story. Bilingual (Indonesian / English), running from a single HTML file with no build step.
+An interactive 3D solar-system simulation built for education — orbit it, zoom into it, tap any planet for the full story, or take the controls and fly there yourself. Bilingual (Indonesian / English). The whole app is one generated HTML file; the only other files are what a PWA needs to be installable.
 
 ![Main view](docs/screenshots/desktop-overview.jpg)
 
@@ -22,6 +22,8 @@ An interactive 3D solar-system simulation built for education — orbit it, zoom
 | 🎚️ **Synthesised engine** | The engine roar is generated in the browser — no audio files — and swells with the thrust lever, ducking whenever the ship computer speaks |
 | 🌐 **Bilingual** | The language is chosen on first launch (and remembered), and the ID/EN buttons switch the entire interface *and* all content at any time |
 | 📄 **In-app credits** | A credits button in the top bar lists every data and texture source, with links |
+| ⛶ **Full screen** | One button (or `F`) in the top bar and in the cockpit |
+| 📲 **Installable** | A real PWA: install it to the home screen and it opens without a browser, and without a network |
 | 📱 **Mobile-first** | The info panel becomes a bottom sheet, touch targets are enlarged, and the camera reframes itself automatically |
 
 ### Educational content
@@ -105,6 +107,18 @@ Details that matter more than they sound:
   flying — and clears itself — even if you leave the cockpit mid-explosion.
 - **The engine falls silent** while the ship is wreckage.
 
+### The cockpit canopy
+
+Pilot mode is framed like the inside of a cabin: a rounded window with a lit metal
+rim, two canopy ribs kept out towards the edges so they never sit over the crosshair,
+a faint sheen as if there were glass in the way, a roof shadow across the top of the
+view, and a curved console the stick and thrust lever are mounted on. It turns red
+when the ship is wrecked.
+
+It is all CSS on one element — the hull is a single enormous spread shadow around a
+rounded rectangle, which is why it fits any screen shape without artwork. The window
+still leaves about 87% of the screen visible.
+
 ### Engine sound
 
 Synthesised with the Web Audio API rather than shipped as audio files, so it stays a
@@ -129,6 +143,24 @@ allow it no other way, and it is suspended on exit and in a hidden tab.
 
 Controls: drag or arrows/WASD to steer, the lever or the mouse wheel for thrust,
 space to brake, Escape to leave.
+
+---
+
+## 📲 Install it
+
+The app is a PWA. On Android and desktop Chrome an **install** button appears in the
+top bar when the browser offers it; on iPhone and iPad, Safari installs through
+*Share → Add to Home Screen*. Installed, it opens in its own window with no browser
+chrome around it.
+
+A service worker caches the app shell **and** the Three.js module and planet textures
+from the CDN, so after one online visit it starts and runs with no network at all —
+which is the difference between a museum kiosk that works and one that shows an error.
+Page loads are network-first, so a redeploy is picked up on the next online visit
+rather than being pinned to whatever was cached first.
+
+Files involved: `manifest.webmanifest`, `sw.js`, `icons/`. The icons are generated
+rather than hand-drawn — see `tools/make-icons.mjs`.
 
 ---
 

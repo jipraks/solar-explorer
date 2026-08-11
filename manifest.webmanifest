@@ -1,0 +1,20 @@
+{
+  "name": "Jelajah Tata Surya · Explore the Solar System",
+  "short_name": "Tata Surya",
+  "description": "Simulasi tata surya 3D interaktif untuk anak — jelajahi, dengarkan, dan terbangkan pesawatmu sendiri. An interactive 3D solar system for children.",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05060f",
+  "theme_color": "#05060f",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["education", "kids", "science"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

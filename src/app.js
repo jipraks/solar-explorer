@@ -381,6 +381,8 @@ function applyLang(){
   });
   el('helpBtn').title = t('helpTitle');
   el('creditsBtn').title = t('creditsTitle');
+  el('installBtn').title = t('install');
+  syncFullscreenUI();
   buildNav(); buildHelp(); buildCredits(); updateSpeedLabel();
   syncCockpitLang();
   syncHudHeight();
@@ -871,6 +873,7 @@ el('langID').onclick = ()=> setLang('id');
 el('langEN').onclick = ()=> setLang('en');
 addEventListener('keydown', e=>{
   if(el('langGate').classList.contains('open')) return;   // pick a language first
+  if(e.key === 'f' || e.key === 'F'){ toggleFullscreen(); return; }
   if(pilot){
     if(steerKey(e.code, true)){ e.preventDefault(); el('ckHint').classList.add('hide'); return; }
     if(e.code==='Space'){ e.preventDefault(); braking = true; return; }
@@ -1592,6 +1595,71 @@ document.addEventListener('visibilitychange', ()=>{
   else if(pilot) audioSet('resume');
 });
 setThrottle(0);
+
+/* ================= full screen =================
+   Prefixed calls are still needed for Safari, and iPhone Safari has no
+   element fullscreen at all — there the button is hidden rather than left
+   as a control that does nothing when a child presses it. */
+const ICO_FS_IN  = '<path d="M4 9V4.5h4.6M20 9V4.5h-4.6M4 15v4.5h4.6M20 15v4.5h-4.6"/>';
+const ICO_FS_OUT = '<path d="M8.8 4.4V9H4.2M15.2 4.4V9h4.6M8.8 19.6V15H4.2M15.2 19.6V15h4.6"/>';
+const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+function toggleFullscreen(){
+  const root = document.documentElement;
+  try{
+    if(fsElement()){
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const r = exit && exit.call(document);
+      if(r && r.catch) r.catch(()=>{});
+    } else {
+      const enter = root.requestFullscreen || root.webkitRequestFullscreen;
+      const r = enter && enter.call(root, {navigationUI:'hide'});
+      if(r && r.catch) r.catch(()=>{});
+    }
+  }catch(e){}
+}
+function syncFullscreenUI(){
+  const on = !!fsElement();
+  for(const id of ['fsBtn', 'ckFs']){          // top bar and cockpit share the state
+    const b = el(id);
+    b.classList.toggle('hide', !fsEnabled);
+    b.classList.toggle('on', on);
+    b.querySelector('svg').innerHTML = on ? ICO_FS_OUT : ICO_FS_IN;
+    b.title = t(on ? 'fsOff' : 'fsOn');
+  }
+}
+el('fsBtn').onclick = toggleFullscreen;
+el('ckFs').onclick = toggleFullscreen;
+document.addEventListener('fullscreenchange', syncFullscreenUI);
+document.addEventListener('webkitfullscreenchange', syncFullscreenUI);
+syncFullscreenUI();
+
+/* ================= install as an app =================
+   Chromium fires beforeinstallprompt and lets the page ask at a moment of its
+   choosing; the button only appears when there is a prompt to show, so it is
+   never a dead control. iOS has no such event — Safari installs through its
+   own Share menu, so nothing is shown there. */
+let installPrompt = null;
+addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  installPrompt = e;
+  el('installBtn').classList.remove('hide');
+  el('installBtn').title = t('install');
+});
+el('installBtn').onclick = async ()=>{
+  if(!installPrompt) return;
+  el('installBtn').classList.add('hide');
+  try{
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+  }catch(e){}
+  installPrompt = null;
+};
+addEventListener('appinstalled', ()=>{
+  installPrompt = null;
+  el('installBtn').classList.add('hide');
+});
 
 /* ================= layout ================= */
 /* The planet chips must sit right above the control card, never behind it.
