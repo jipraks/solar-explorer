@@ -23,6 +23,7 @@ An interactive 3D solar-system simulation built for education — orbit it, zoom
 | 🌐 **Bilingual** | The language is chosen on first launch (and remembered), and the ID/EN buttons switch the entire interface *and* all content at any time |
 | 📄 **In-app credits** | A credits button in the top bar lists every data and texture source, with links |
 | ⛶ **Full screen** | One button (or `F`) in the top bar and in the cockpit |
+| ☀️ **Screen stays awake** | A tablet will not lock itself mid-orbit; the lock is dropped whenever the app is not on screen |
 | 📲 **Installable** | A real PWA: install it to the home screen and it opens without a browser, and without a network |
 | 📱 **Mobile-first** | The info panel becomes a bottom sheet, touch targets are enlarged, and the camera reframes itself automatically |
 
@@ -167,6 +168,21 @@ rather than being pinned to whatever was cached first.
 
 Files involved: `manifest.webmanifest`, `sw.js`, `icons/`. The icons are generated
 rather than hand-drawn — see `tools/make-icons.mjs`.
+
+### Keeping the screen awake
+
+A tablet locking itself while a child is watching the planets go round is the most
+annoying thing this app can do, so it holds a
+[screen wake lock](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
+for as long as the page is visible.
+
+The browser releases the lock by itself the moment the page is hidden — which is what
+keeps this from flattening a battery in someone's bag — so it is taken again on the way
+back. Chromium grants it on load; Safari (16.4+) refuses until the page has been
+interacted with, so the request is retried on the first touch or key. Browsers without
+the API simply go without, and nothing else changes.
+
+There is no button for it. It is on whenever the app is.
 
 ---
 
